@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/logo";
+import { CompletionProvider } from "@/components/quests/completion-provider";
 import { MobileNav, SidebarNav } from "@/components/shell/nav-links";
 import { PlayerSummary } from "@/components/shell/player-summary";
 import { ProfileMenu } from "@/components/shell/profile-menu";
@@ -22,6 +23,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
   const summary = await getShellSummary(db, user.id, today);
 
   return (
+    <CompletionProvider>
     <div className="min-h-dvh lg:grid lg:grid-cols-[260px_1fr]">
       <a
         href="#main"
@@ -69,5 +71,6 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
 
       <MobileNav unread={summary.unreadNotifications} />
     </div>
+    </CompletionProvider>
   );
 }

@@ -214,6 +214,8 @@ export const weeklyChallenge = pgTable(
     templateId: text("template_id").references(() => questTemplate.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     category: categoryEnum("category").notNull(),
+    /** When true, completed quests of any category advance the challenge. */
+    countsAnyCategory: boolean("counts_any_category").notNull().default(false),
     target: smallint("target").notNull(),
     progress: smallint("progress").notNull().default(0),
     weekStart: date("week_start", { mode: "string" }).notNull(),
@@ -227,6 +229,8 @@ export const weeklyChallenge = pgTable(
   (t) => [
     uniqueIndex("weekly_challenge_unique").on(t.userId, t.templateId, t.weekStart),
     check("weekly_target_positive", sql`${t.target} > 0`),
+    check("weekly_progress_range", sql`${t.progress} between 0 and ${t.target}`),
+    index("weekly_challenge_user_week_idx").on(t.userId, t.weekStart),
   ],
 );
 

@@ -52,7 +52,12 @@ export type XpGrantResult =
       change: ProgressionChange;
     };
 
-async function lockProgress(tx: AppDb, userId: string) {
+/**
+ * Locks the player's progress row for the rest of the transaction. Every reward write
+ * takes this lock, so anything counted under it (daily caps, custom limits) is race-free.
+ * Lock order: a quest row (if any) first, then this.
+ */
+export async function lockProgress(tx: AppDb, userId: string) {
   const [row] = await tx
     .select()
     .from(playerProgress)

@@ -1,8 +1,9 @@
-import { and, count, desc, eq, gte, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   achievement,
   notification,
   playerAchievement,
+  questCompletion,
   playerAttribute,
   playerProgress,
   playerQuest,
@@ -16,13 +17,25 @@ import { addDays, type QuestDate } from "@/lib/time";
 
 /** Compact numbers for the persistent shell (sidebar / top bar). */
 export async function getShellSummary(db: AppDb, userId: string, today: QuestDate) {
-  const [progress, quests, unread] = await Promise.all([
+  const [progress, quests, openOneOff, unread] = await Promise.all([
     db.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) }),
     db
       .select({ status: playerQuest.status, n: count() })
       .from(playerQuest)
-      .where(and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today)))
+      .where(
+        and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today), isNotNull(playerQuest.templateId)),
+      )
       .groupBy(playerQuest.status),
+    db
+      .select({ n: count() })
+      .from(playerQuest)
+      .where(
+        and(
+          eq(playerQuest.userId, userId),
+          isNull(playerQuest.templateId),
+          inArray(playerQuest.status, ["available", "in_progress"]),
+        ),
+      ),
     db
       .select({ n: count() })
       .from(notification)
@@ -34,31 +47,33 @@ export async function getShellSummary(db: AppDb, userId: string, today: QuestDat
   return {
     level: levelProgress(totalXp),
     rank: rankProgress(totalXp),
-    questsOpen: open,
+    /** Open scheduled quests today plus open one-off custom quests. */
+    questsOpen: open + (openOneOff[0]?.n ?? 0),
     questsDone: byStatus.completed ?? 0,
     questsTotal: open + (byStatus.completed ?? 0),
     unreadNotifications: unread[0]?.n ?? 0,
   };
 }
 
-export async function getStatusWindow(db: AppDb, userId: string, today: QuestDate) {
+export async function getStatusWindow(
+  db: AppDb,
+  userId: string,
+  clock: { today: QuestDate; timeZone: string; dayStartHour: number },
+) {
+  const { today } = clock;
   const since = addDays(today, -400);
+  // A completion's quest day, computed in the player's zone from when it actually happened.
+  const completionDay = sql<string>`((${questCompletion.completedAt} at time zone ${clock.timeZone}) - make_interval(hours => ${clock.dayStartHour}))::date::text`;
   const [attributes, todayQuests, activeDates, recentXp, recentAchievements] = await Promise.all([
     db.query.playerAttribute.findMany({ where: eq(playerAttribute.userId, userId) }),
     db.query.playerQuest.findMany({
-      where: and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today)),
+      where: and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today), isNotNull(playerQuest.templateId)),
       orderBy: (q, { asc }) => [asc(q.createdAt)],
     }),
     db
-      .selectDistinct({ date: playerQuest.questDate })
-      .from(playerQuest)
-      .where(
-        and(
-          eq(playerQuest.userId, userId),
-          eq(playerQuest.status, "completed"),
-          gte(playerQuest.questDate, since),
-        ),
-      ),
+      .selectDistinct({ date: completionDay })
+      .from(questCompletion)
+      .where(and(eq(questCompletion.userId, userId), gte(completionDay, since))),
     db.query.xpLedger.findMany({
       where: eq(xpLedger.userId, userId),
       orderBy: [desc(xpLedger.createdAt)],

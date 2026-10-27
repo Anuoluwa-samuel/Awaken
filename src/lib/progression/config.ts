@@ -90,3 +90,17 @@ export type RankId = (typeof RANKS)[number]["id"];
 
 export const DEFAULT_DAY_START_HOUR = 4;
 export const RANK_IDS = ["E", "D", "C", "B", "A", "S", "N"] as const satisfies readonly RankId[];
+
+export const QUEST_LIMITS = {
+  /** Open (available / in progress) one-off custom quests per player. */
+  maxOpenCustomQuests: 30,
+  /** Active recurring custom quests per player. */
+  maxRecurringCustomQuests: 10,
+  maxChecklistItems: 12,
+  maxTitleLength: 80,
+  maxDescriptionLength: 500,
+  maxEvidenceLength: 500,
+} as const;
+
+/** Weekly challenge reward = this multiple of the difficulty default (uncapped). */
+export const WEEKLY_XP_MULTIPLIER = 2;

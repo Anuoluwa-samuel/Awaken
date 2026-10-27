@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { notification, playerProgress, user, xpLedger } from "@/db/schema";
+import { notification, playerProgress, questCompletion, user, weeklyChallenge, xpLedger } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { LIMITS } from "@/lib/progression/config";
 import { checkProgressConsistency } from "@/server/services/consistency";
 import { createPlayer } from "@/server/services/player";
-import { ensureDailyQuests, listQuestsForDay } from "@/server/services/quests";
+import { completeQuest, createCustomQuest, ensureDailyQuests, listOpenOneOffQuests, listQuestsForDay } from "@/server/services/quests";
+import { ensureWeeklyChallenges } from "@/server/services/weekly";
 import { grantXp, type XpGrant } from "@/server/services/rewards";
 import { createPgTestDb } from "./pg-helpers";
 
@@ -18,13 +19,13 @@ afterAll(async () => pg?.close());
 
 const NOON = new Date("2026-10-27T11:00:00Z");
 
-async function newPlayer() {
+async function newPlayer(focusAreas: ("fitness" | "learning")[] = []) {
   const id = crypto.randomUUID();
   await db.insert(user).values({ id, name: "Racer", email: `${id}@example.test` });
   await createPlayer(
     db,
     id,
-    { displayName: "Racer", timeZone: "Africa/Lagos", dayStartHour: 4, focusAreas: [], preferredDifficulty: "normal", dailyTarget: null },
+    { displayName: "Racer", timeZone: "Africa/Lagos", dayStartHour: 4, focusAreas, preferredDifficulty: "normal", dailyTarget: null },
     NOON,
   );
   return id;
@@ -95,5 +96,63 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     const quests = await listQuestsForDay(db, userId, "2026-10-28");
     expect(quests.length).toBeGreaterThan(0);
     expect(new Set(quests.map((q) => q.templateId)).size).toBe(quests.length);
+  });
+
+  it("completes a quest once when 20 completion requests race", async () => {
+    const userId = await newPlayer(["learning"]);
+    const [quest] = await listQuestsForDay(db, userId, "2026-10-27");
+    const results = await Promise.allSettled(
+      Array.from({ length: 20 }, () => completeQuest(db, userId, quest.id, { now: NOON })),
+    );
+    const fulfilled = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    expect(fulfilled).toHaveLength(20);
+    expect(fulfilled.filter((r) => r.status === "completed")).toHaveLength(1);
+    expect(fulfilled.filter((r) => r.status === "already_completed")).toHaveLength(19);
+    expect(await db.query.questCompletion.findMany({ where: eq(questCompletion.playerQuestId, quest.id) })).toHaveLength(1);
+    expect(await db.query.xpLedger.findMany({ where: eq(xpLedger.sourceId, quest.id) })).toHaveLength(1);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+  });
+
+  it("enforces the custom category limit under parallel completions", async () => {
+    const userId = await newPlayer();
+    for (let i = 0; i < 8; i++) {
+      await createCustomQuest(
+        db,
+        userId,
+        { title: `Task ${i}`, description: "", category: "career", difficulty: "normal", attribute: null, xpReward: null, scheduleType: "once", targetDate: null, days: [], estimatedMinutes: null, checklist: [] },
+        NOON,
+      );
+    }
+    const quests = await listOpenOneOffQuests(db, userId);
+    const results = await Promise.all(quests.map((q) => completeQuest(db, userId, q.id, { now: NOON })));
+    // The quest rows lock independently, so the category count must stay exact via the progress lock.
+    const rewarded = results.filter((r) => r.xp.granted > 0);
+    expect(rewarded).toHaveLength(3);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+  });
+
+  it("grants a weekly reward once when parallel completions reach the target together", async () => {
+    const userId = await newPlayer(["fitness", "learning"]);
+    await ensureWeeklyChallenges(db, userId, NOON);
+    // The default challenge needs 5 quests of any kind; complete 5 custom ones at once.
+    for (let i = 0; i < 5; i++) {
+      await createCustomQuest(
+        db,
+        userId,
+        { title: `Mixed ${i}`, description: "", category: (["career", "finance", "social", "wellbeing", "organization"] as const)[i], difficulty: "easy", attribute: null, xpReward: null, scheduleType: "once", targetDate: null, days: [], estimatedMinutes: null, checklist: [] },
+        NOON,
+      );
+    }
+    const quests = await listOpenOneOffQuests(db, userId);
+    await Promise.all(quests.map((q) => completeQuest(db, userId, q.id, { now: NOON })));
+    const challenge = (await db.query.weeklyChallenge.findMany({ where: eq(weeklyChallenge.userId, userId) })).find(
+      (w) => w.countsAnyCategory,
+    )!;
+    expect(challenge).toMatchObject({ progress: 5, status: "completed" });
+    const weeklyRewards = (await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) })).filter(
+      (l) => l.eventType === "weekly_completed",
+    );
+    expect(weeklyRewards).toHaveLength(1);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import type { AppDb } from "@/db/types";
 import { ATTRIBUTES, type Category } from "@/lib/progression/config";
 import type { OnboardingInput } from "@/lib/validation/player";
 import { ensureDailyQuests } from "./quests";
+import { ensureWeeklyChallenges } from "./weekly";
 
 const DEFAULT_STARTERS = ["daily.review-priorities", "daily.study-30", "daily.workout"];
 const MAX_STARTERS = 5;
@@ -72,6 +73,7 @@ export async function createPlayer(db: AppDb, userId: string, input: OnboardingI
   });
 
   await ensureDailyQuests(db, userId, now);
+  await ensureWeeklyChallenges(db, userId, now);
   return { created };
 }
 

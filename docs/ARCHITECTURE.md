@@ -221,6 +221,54 @@ Concurrent loads therefore cannot duplicate a day's quests. Missed quests
 never touch the ledger, so lifetime XP is never reduced. A scheduled job
 (`/api/cron/daily`) can call the same function later for notifications.
 
+## 6a. Quest completion, custom quests & weekly challenges (Phase 4)
+
+**Completion** (`completeQuest` in `src/server/services/quests.ts`), one transaction:
+
+1. Lock the quest row **scoped to the owner** (`WHERE id = $1 AND user_id = $2 FOR UPDATE`).
+   Another player's quest is reported as not found — never "forbidden" — so ids can't be probed.
+2. Already `completed` → return `already_completed`, grant nothing.
+   Other terminal states → `INVALID_STATE`.
+3. Scheduled quests (system or recurring custom) can only be completed on their own quest day
+   (`NOT_TODAY`), even if the rollover hasn't run yet; one-off quests until their deadline (`PAST_DUE`).
+4. Lock the player (`player_progress FOR UPDATE`), then apply the custom-quest limit.
+5. Insert `quest_completion` (unique per quest), mark the quest completed.
+6. `grantXp` (`quest:{id}`), attribute points (`quest:{id}:attr:{attribute}`) and, for system
+   daily quests, +1 Discipline (`quest:{id}:attr:discipline-bonus`).
+7. Advance this week's matching challenges; reaching a target grants `weekly:{challengeId}` once.
+
+**Lock order** is always quest row → player row → weekly challenge rows, so there are no
+deadlock cycles. Everything counted for a limit is counted under the player lock.
+
+Completions are **self-reported** (`method = self_reported`) and labelled as such in the UI;
+the System never claims to have verified a workout or study session.
+
+**Custom quests** (`createCustomQuest`):
+
+| Rule | Value |
+|---|---|
+| XP | difficulty default, or a requested value clamped to `[5, 2 × default]`; snapshotted at creation |
+| Attribute | chosen, or derived from the category |
+| One-time | open until completed, cancelled, or the end of its optional target date (player's zone) |
+| Recurring | a private template + schedule (days of week); one quest per scheduled day, rewarded at most once per day |
+| Rewarded completions | 3 per category per quest day; further completions are recorded with 0 XP and an explanation |
+| Open one-time quests | 30 per player |
+| Active recurring quests | 10 per player |
+
+Player-authored recurring quests are generated with `kind = custom`, so custom limits apply to them;
+`ensureDailyQuests` only ever schedules system templates or the player's own.
+
+**Weekly challenges** (`src/server/services/weekly.ts`): weeks run Monday–Sunday in quest days.
+Each week a player gets the system weekly templates matching their focus areas plus "Complete five
+planned tasks" (any category counts). Reward = 2 × the difficulty default (100 XP for hard), not
+subject to the daily cap. Unique on `(user, template, week_start)`. Unfinished challenges expire at
+the deadline. Progress only moves inside a quest completion transaction, is capped at the target,
+and the reward is granted when the target is first reached (`reward_claimed_at` records it).
+
+**Notifications.** Level-ups, rank-ups and weekly completions go to the notification feed.
+Individual quest completions are shown as an inline system message instead, so the feed isn't
+flooded by routine activity.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
@@ -258,9 +306,8 @@ Idempotency keys (one per reward-earning fact):
 | Achievement | `achievement:{userId}:{code}` |
 | Focus session | `focus:{sessionId}` |
 
-Quest completion (Phase 4) will additionally lock the `player_quest` row and
-insert a `quest_completion` row (unique per quest), giving three independent
-guards. The client never sends an XP amount, level, or rank.
+Quest completion additionally locks the `player_quest` row and inserts a
+`quest_completion` row (unique per quest), giving three independent guards (§6a). The client never sends an XP amount, level, or rank.
 
 **Consistency.** The ledgers are the source of truth; `player_progress` and
 `player_attribute` are caches. `checkProgressConsistency` compares them and
@@ -294,7 +341,7 @@ creates and drops a throwaway database and skips if no server is reachable.
       Better Auth (register/login/logout/verify/reset), onboarding → player + attributes + starter quests,
       visual system + app shell, progression/time pure modules with unit tests
 - [x] Phase 3 — Reward service, ledger, level events, notifications, consistency check + repair, integration and concurrency tests
-- [ ] Phase 4 — Daily generation, custom quest builder, completion flow, idempotency/concurrency tests
+- [x] Phase 4 — Completion flow, custom quest builder + safeguards, weekly challenges, quest detail & reward history, idempotency/concurrency tests
 - [ ] Phase 5 — Status window details, level-up panel, recent activity
 - [ ] Phase 6 — Habits & streaks
 - [ ] Phase 7 — Achievements, titles, skill tree, rank history

@@ -19,7 +19,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
   const { user, profile, today } = await getPlayerContext();
   const [summary, status] = await Promise.all([
     getShellSummary(db, user.id, today),
-    getStatusWindow(db, user.id, today),
+    getStatusWindow(db, user.id, { today, timeZone: profile.timeZone, dayStartHour: profile.dayStartHour }),
   ]);
   const openQuests = status.todayQuests.filter((q) => q.status === "available" || q.status === "in_progress");
 

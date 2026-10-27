@@ -12,6 +12,10 @@ export type SystemTemplate = {
   estimatedMinutes?: number;
   cadence: "daily" | "weekly";
   weeklyTarget?: number;
+  /** Weekly only: any completed quest counts, not just this category. */
+  weeklyAnyCategory?: boolean;
+  /** Weekly only: assigned to every player regardless of focus areas. */
+  weeklyDefault?: boolean;
   /** Offered as a starter quest when the player picks this focus area. */
   starter?: boolean;
 };
@@ -31,7 +35,7 @@ export const SYSTEM_QUEST_TEMPLATES: SystemTemplate[] = [
   // Weekly
   { key: "weekly.study-4", title: "Complete four study sessions", description: "Four learning quests this week.", category: "learning", difficulty: "hard", attribute: "intelligence", cadence: "weekly", weeklyTarget: 4 },
   { key: "weekly.workout-3", title: "Finish three workouts", description: "Three fitness quests this week.", category: "fitness", difficulty: "hard", attribute: "strength", cadence: "weekly", weeklyTarget: 3 },
-  { key: "weekly.tasks-5", title: "Complete five planned tasks", description: "Five organization quests this week.", category: "organization", difficulty: "hard", attribute: "discipline", cadence: "weekly", weeklyTarget: 5 },
+  { key: "weekly.tasks-5", title: "Complete five planned tasks", description: "Finish any five quests this week.", category: "organization", difficulty: "hard", attribute: "discipline", cadence: "weekly", weeklyTarget: 5, weeklyAnyCategory: true, weeklyDefault: true },
 ];
 
 export const SKILLS = [
