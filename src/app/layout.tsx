@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Chakra_Petch, Geist, Geist_Mono } from "next/font/google";
+import { Chakra_Petch, Geist, Geist_Mono, Montserrat } from "next/font/google";
+import { IntroSplash } from "@/components/brand/intro-splash";
+import { LogoDefs } from "@/components/brand/logo";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -9,6 +11,7 @@ const chakra = Chakra_Petch({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
+const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"], weight: ["800"] });
 
 export const metadata: Metadata = {
   title: { default: "AWAKEN", template: "%s · AWAKEN" },
@@ -24,9 +27,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${chakra.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${chakra.variable} ${montserrat.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <LogoDefs />
+        <IntroSplash />
+        {children}
+      </body>
     </html>
   );
 }

@@ -27,6 +27,15 @@ In development, verification and password-reset emails are printed to the
 dev-server console. Production has no email provider yet (see
 `src/lib/email.ts`) and sending will throw rather than silently fail.
 
+Every full page load opens with the AWAKEN logo intro
+(`src/components/brand/intro-splash.tsx`). It stays at least 2.4 s and until the
+page has loaded, never more than 6 s; Escape or a click skips it, and it is
+shortened for reduced-motion users.
+
+> Don't run `pnpm build` while `pnpm dev` is running — they share `.next`, and the
+> dev server can keep serving stale CSS afterwards. If that happens, stop the dev
+> server, `rm -rf .next`, and start it again.
+
 ## Scripts
 
 | Script | What it does |
