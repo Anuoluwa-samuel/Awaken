@@ -34,9 +34,10 @@ dev-server console. Production has no email provider yet (see
 | `pnpm dev` / `build` / `start` | Next.js |
 | `pnpm typecheck` | Route type generation + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Unit tests + integration tests against in-process Postgres (PGlite) |
+| `pnpm test` | Unit + integration tests (PGlite), plus concurrency tests against the Docker Postgres when it is running |
 | `pnpm db:generate` | Create a migration from schema changes |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Database |
+| `pnpm db:check [--repair]` | Verify cached XP/level/rank/attributes against the ledgers |
 
 ## Project layout
 
@@ -55,5 +56,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-Phase 1 (design) and Phase 2 (foundation) are done. See the checklist at the
+Phases 1–3 (design, foundation, progression engine) are done. See the checklist at the
 end of the architecture doc for what comes next.

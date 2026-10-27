@@ -5,6 +5,7 @@ import {
   DIFFICULTY_XP,
   LIMITS,
   type Difficulty,
+  type RankId,
 } from "./config";
 import { levelFromXp, rankForLevel } from "./levels";
 
@@ -51,8 +52,8 @@ export type ProgressionChange = {
   fromLevel: number;
   toLevel: number;
   levelsGained: number;
-  fromRank: string;
-  toRank: string;
+  fromRank: RankId;
+  toRank: RankId;
   rankChanged: boolean;
   skillPointsGained: number;
 };

@@ -223,26 +223,56 @@ never touch the ledger, so lifetime XP is never reduced. A scheduled job
 
 ## 7. Reward ledger & duplicate prevention
 
-`completeQuest(userId, questId, input)` runs in **one transaction**:
+All XP and attribute writes go through `src/server/services/rewards.ts`
+(`grantXp`, `grantAttribute`). Callers pass a transaction so a reward commits
+or rolls back together with the action that earned it.
 
-1. `SELECT … FROM player_quest WHERE id = $1 AND user_id = $2 FOR UPDATE` —
-   ownership and row lock (concurrent requests serialize here).
-2. Reject unless status ∈ {available, in_progress} and quest_date is today
-   (or within the weekly window).
-3. Insert `quest_completion` (unique on `player_quest_id`).
-4. Compute XP from the **snapshotted** quest reward, apply daily caps.
-5. Insert `xp_ledger` with `idempotency_key = 'quest:' || questId`
-   (`ON CONFLICT DO NOTHING`; zero rows ⇒ already rewarded ⇒ no-op).
-6. Insert attribute gains (`attribute_ledger`, key `quest:{id}:{attr}`).
-7. `UPDATE player_progress SET total_xp = total_xp + amount` and recompute
-   level/rank with the pure functions; insert `level_event` if changed.
-8. Evaluate achievements (each unlock is its own idempotency key).
-9. Insert notifications with `dedupe_key`.
-10. Commit, return the new status snapshot.
+`grantXp(tx, grant)`:
 
-Three independent guards — row lock, unique completion row, unique ledger
-key — mean double clicks, refreshes, retries and parallel requests award XP
-exactly once. The client never sends an XP amount, level, or rank.
+1. `SELECT … FROM player_progress WHERE user_id = $1 FOR UPDATE` — every reward
+   write for a player is serialized on this row. This is also what makes the
+   daily cap race-free: two parallel grants cannot both read "390 earned".
+2. If `xp_ledger.idempotency_key` already exists → return `duplicate`, change nothing.
+3. For capped events (`quest_completed`, `focus_completed`) sum today's capped
+   XP inside the player's quest-day window and clamp the grant (§3). A capped
+   grant is still written, with `amount` reduced (possibly 0) and the reason
+   appended, so the player can see why.
+4. `INSERT INTO xp_ledger … ON CONFLICT (idempotency_key) DO NOTHING` — the
+   unique key is the backstop if the lock were ever bypassed.
+5. Recompute level/rank/skill points with the pure functions and update
+   `player_progress`.
+6. If the level changed, insert one `level_event` (unique per ledger row) and a
+   `level_up` notification (dedupe key `level:{user}:{level}`); on a rank change a
+   `rank_up` notification (`rank:{user}:{rank}`).
+
+`grantAttribute` follows the same pattern against `attribute_ledger`, capped
+per attribute per quest day.
+
+Idempotency keys (one per reward-earning fact):
+
+| Source | Key |
+|---|---|
+| Quest completion | `quest:{playerQuestId}` |
+| Quest attribute gain | `quest:{playerQuestId}:attr:{attribute}` |
+| Weekly challenge | `weekly:{challengeId}` |
+| Achievement | `achievement:{userId}:{code}` |
+| Focus session | `focus:{sessionId}` |
+
+Quest completion (Phase 4) will additionally lock the `player_quest` row and
+insert a `quest_completion` row (unique per quest), giving three independent
+guards. The client never sends an XP amount, level, or rank.
+
+**Consistency.** The ledgers are the source of truth; `player_progress` and
+`player_attribute` are caches. `checkProgressConsistency` compares them and
+`rebuildProgress` rewrites the caches from the ledgers (never the ledgers),
+recording a `progress.rebuilt` audit event. Run `pnpm db:check` to report all
+players, `pnpm db:check --repair` to fix drift.
+
+**Tests.** `tests/integration/rewards.test.ts` (PGlite) covers grants, duplicates,
+exact-threshold and multi-level-ups, rank-ups, caps and their day boundary,
+rollback, isolation and rebuild. `tests/integration/concurrency.pg.test.ts` runs
+against the real Postgres server with 15–40 truly parallel transactions; it
+creates and drops a throwaway database and skips if no server is reachable.
 
 ## 8. Route map
 
@@ -263,7 +293,7 @@ exactly once. The client never sends an XP amount, level, or rank.
 - [x] Phase 2 — Next.js + TS strict + Tailwind, Drizzle + Postgres, full schema & migration,
       Better Auth (register/login/logout/verify/reset), onboarding → player + attributes + starter quests,
       visual system + app shell, progression/time pure modules with unit tests
-- [ ] Phase 3 — Reward service, ledger, level events, consistency check, integration tests (PGlite)
+- [x] Phase 3 — Reward service, ledger, level events, notifications, consistency check + repair, integration and concurrency tests
 - [ ] Phase 4 — Daily generation, custom quest builder, completion flow, idempotency/concurrency tests
 - [ ] Phase 5 — Status window details, level-up panel, recent activity
 - [ ] Phase 6 — Habits & streaks
