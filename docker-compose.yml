@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: awaken
+      POSTGRES_PASSWORD: awaken
+      POSTGRES_DB: awaken
+    ports:
+      - "54350:5432"
+    volumes:
+      - awaken-db:/var/lib/postgresql/data
+volumes:
+  awaken-db:

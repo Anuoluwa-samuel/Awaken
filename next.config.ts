@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
+// Cache Components is off: almost every page is per-player, request-time data.
+// See docs/ARCHITECTURE.md §1.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  cacheComponents: false,
   turbopack: {
     rules: {
       "*.css": {

@@ -1,0 +1,274 @@
+# AWAKEN — Architecture & Game Design (Phase 1)
+
+This document is the source of truth for how AWAKEN works. Numbers quoted
+here live in code under `src/lib/progression/config.ts`; if the two ever
+disagree, the code wins and this file is out of date.
+
+---
+
+## 1. Application architecture
+
+```
+Browser ──► Next.js 16 (App Router)
+             ├─ proxy.ts ............ optimistic redirect for /system/* without a session cookie
+             ├─ app/(public), (auth) . marketing + auth pages (Server Components + small client forms)
+             ├─ app/onboarding ....... first-run setup (server action)
+             ├─ app/system/* ......... player app (Server Components read via services)
+             ├─ app/api/auth/[...all]  Better Auth handler
+             └─ server actions ....... every mutation (complete quest, create quest, …)
+                    │
+                    ▼
+             src/server/services ..... business rules, authorization, transactions
+             src/server/repositories . narrow Drizzle queries, always scoped by userId
+             src/lib/progression ..... PURE functions: XP curve, levels, ranks, rewards
+             src/lib/time ............ PURE functions: player day boundaries
+                    │
+                    ▼
+             PostgreSQL (Drizzle ORM, SQL migrations in /drizzle)
+```
+
+Key decisions
+
+| Decision | Choice | Why |
+|---|---|---|
+| Framework | Next.js 16.4 App Router, React 19.3, TS strict | Requested stack. |
+| Cache Components | **Disabled** (`cacheComponents: false`) | Nearly every page is per-player request-time data. Cache Components would force Suspense around every session read for no caching benefit. Revisit for the public landing page only. |
+| Auth | Better Auth 1.7 (email + password, email verification, password reset, DB sessions, built-in rate limiting) with the Drizzle adapter | Maintained, self-hosted, stores sessions in our Postgres, supports every required flow. |
+| Email delivery | `src/lib/email.ts`: SMTP-less **console transport in development**, explicit error in production until a provider is configured | We never pretend an email was sent. |
+| Mutations | Server Actions calling services; route handlers only for auth and future integrations | Keeps privileged logic server-side, typed end to end. |
+| Validation | Zod schemas in `src/lib/validation`, shared by forms (React Hook Form) and actions | One definition, validated twice, trusted once (server). |
+| Progression maths | Pure, deterministic, unit-tested modules with no DB or React imports | Testable in isolation, reusable by services and UI previews. |
+| Tests | Vitest (unit + integration against **PGlite**, an in-process Postgres), RTL for components, Playwright for E2E against Docker Postgres | Integration tests run real SQL and constraints without needing a server. |
+
+Separation rule: components never compute rewards. They render values the
+server computed. The UI may *preview* ("+25 XP") using the same pure config,
+but the server recomputes everything on submit.
+
+---
+
+## 2. Database schema
+
+All tables use `text` primary keys (UUIDv4 / Better Auth ids), `timestamptz`
+timestamps stored in UTC, and `ON DELETE CASCADE` from `user`. Every
+player-owned row carries `user_id` so every query can be scoped.
+
+### Auth (Better Auth-owned)
+- `user` (id, name, email unique, email_verified, image, created_at, updated_at)
+- `session` (id, token unique, user_id → user, expires_at, ip_address, user_agent, …)
+- `account` (id, user_id → user, provider_id, account_id, password hash, …)
+- `verification` (id, identifier, value, expires_at, …) — email verification & reset tokens
+
+### Player
+- `player_profile` — user_id PK/FK, display_name, time_zone (IANA), day_start_hour (0–23),
+  focus_areas text[], preferred_difficulty, daily_target (nullable), avatar_url,
+  equipped_title_id, onboarded_at, created_at, updated_at
+- `player_progress` — **cache** derived from the ledger: user_id PK, total_xp, level,
+  rank, skill_points_earned, skill_points_spent, updated_at. Verifiable with
+  `SUM(xp_ledger.amount) = total_xp` (consistency check in Phase 3).
+- `player_attribute` — (user_id, attribute) PK, points. `attribute` ∈
+  strength | intelligence | discipline | vitality | creativity.
+- `attribute_ledger` — append-only attribute gains (user_id, attribute, amount,
+  source_type, source_id, idempotency_key **unique**, created_at).
+
+### Quests
+- `quest_template` — system or player-authored templates: id, owner_user_id
+  (null = system), title, description, category, difficulty, attribute,
+  xp_reward (null = difficulty default), estimated_minutes, cadence
+  (`daily` | `weekly` | `once`), is_active, created_at.
+- `player_quest` — a concrete quest instance: id, user_id, template_id (nullable
+  for one-off custom quests), kind (`daily` | `weekly` | `custom`), title,
+  description, category, difficulty, attribute, **xp_reward (snapshotted at
+  creation)**, quest_date (`date`, the player's local quest day), due_at,
+  status, estimated_minutes, evidence_note, started_at, completed_at,
+  created_at, updated_at.
+  **Unique (user_id, template_id, quest_date)** — prevents duplicate daily sets.
+- `quest_completion` — id, player_quest_id **unique**, user_id, method
+  (`self_reported` | `focus_session` | `habit` | `integration`), evidence_note,
+  completed_at. The unique FK is the second line of defence against double completion.
+- `weekly_challenge` — id, user_id, title, category, target, progress,
+  week_start (`date`), deadline_at, xp_reward, status, completed_at,
+  reward_claimed_at. Unique (user_id, template_key, week_start).
+
+### Rewards
+- `xp_ledger` — id, user_id, event_type (`quest_completed` | `weekly_completed` |
+  `achievement_unlocked` | `focus_completed` | `goal_completed` | `adjustment`),
+  source_type, source_id, amount (int, may be negative only for `adjustment`),
+  reason, **idempotency_key unique**, created_at.
+- `level_event` — user_id, from_level, to_level, from_rank, to_rank, ledger_id, created_at.
+
+### Habits, skills, achievements, focus, goals, notifications (schema in Phase 2, logic in later phases)
+- `habit` (id, user_id, name, description, category, schedule_days int[] (0=Sun),
+  target_per_week, attribute, linked_template_id, reminder_time, archived_at, …)
+- `habit_completion` (id, habit_id, user_id, local_date, completed_at) — **unique (habit_id, local_date)**
+- `skill` (id/code, name, description, category, required_level, prerequisite_code, cost, effect json)
+- `player_skill` (user_id, skill_code) PK, unlocked_at
+- `achievement` (code PK, name, description, icon, criteria json, xp_reward, title_reward)
+- `player_achievement` (user_id, achievement_code) PK, unlocked_at
+- `player_title` (user_id, title) PK, source, earned_at
+- `focus_session` (id, user_id, player_quest_id, planned_seconds, started_at,
+  paused_at, total_paused_seconds, ended_at, status, credited_seconds)
+- `goal` (id, user_id, title, description, category, deadline, status, completed_at)
+- `goal_milestone` (id, goal_id, user_id, title, position, player_quest_id, completed_at)
+- `notification` (id, user_id, type, title, body, href, **dedupe_key unique**, read_at, created_at)
+- `audit_event` (id, actor_user_id, action, target_type, target_id, metadata json, created_at)
+
+Indexes: `(user_id, quest_date)`, `(user_id, status)` on `player_quest`;
+`(user_id, created_at)` on `xp_ledger`, `notification`, `habit_completion`.
+
+---
+
+## 3. XP and level formulas
+
+Default XP by difficulty: **easy 10 · normal 25 · hard 50 · elite 100**.
+Custom quests may set an explicit reward, clamped server-side to
+`[5, maxForDifficulty]` where max = 2× the difficulty default.
+
+**Lifetime XP is the stored value. Level and in-level progress are derived.**
+
+XP needed to go from level `L` to `L+1`:
+
+```
+step(L) = BASE + INCREMENT × (L − 1)        BASE = 100, INCREMENT = 20
+```
+
+Cumulative XP to *reach* level `L`:
+
+```
+xpToReach(L) = BASE·(L−1) + (INCREMENT/2)·(L−1)·(L−2)
+```
+
+| Level | Lifetime XP | Days @150 XP/day | Days @250 XP/day |
+|---|---:|---:|---:|
+| 2 | 100 | 1 | <1 |
+| 5 | 520 | 3 | 2 |
+| 10 | 1,620 | 11 | 6 |
+| 20 | 5,320 | 35 | 21 |
+| 50 | 28,420 | 189 | 114 |
+| 70 | 53,820 | 359 | 215 |
+| 90 | 87,220 | 581 | 349 |
+
+`levelFromXp(xp)` returns the highest `L` with `xpToReach(L) ≤ xp`, so one
+large reward can cross several levels; the reward service records one
+`level_event` per grant spanning `from_level → to_level`.
+
+Anti-grind safeguards (enforced on the server, shown to the user):
+- **Daily quest-XP soft cap: 400 XP per player day** from quests/focus. Beyond
+  it, completions are still recorded but award 0 XP, with the reason stated.
+  Achievements and weekly challenges are not capped.
+- Custom quests: max **3 rewarded completions per category per day**; a
+  recurring custom quest can be rewarded at most once per day.
+- Rewards snapshot onto the quest at creation; editing a quest's difficulty
+  after creation shows the new value before saving and never re-grants.
+
+Skill points: **1 per level gained** (level 2 onward) plus any achievement that grants one.
+
+## 4. Rank thresholds
+
+Rank is derived from level (one config table):
+
+| Rank | Levels |
+|---|---|
+| E-Rank | 1–9 |
+| D-Rank | 10–19 |
+| C-Rank | 20–34 |
+| B-Rank | 35–49 |
+| A-Rank | 50–69 |
+| S-Rank | 70–89 |
+| National-Level | 90+ |
+
+At ~150 XP/day a consistent player reaches S-Rank in about a year.
+
+## 5. Attributes
+
+Each quest has one focus attribute. On completion it gains
+**easy 1 · normal 2 · hard 3 · elite 5** points, capped at **10 points per
+attribute per player day**. Every *scheduled daily* quest completed before
+it expires also gives **+1 Discipline**. Default mapping by category:
+fitness → Strength, learning/career → Intelligence, organization/finance →
+Discipline, wellbeing/social → Vitality, creativity → Creativity.
+Attributes are game mechanics, not measurements of ability or health.
+
+## 6. Daily quest lifecycle
+
+**Quest day.** A player's quest day is the local calendar date in their IANA
+time zone, shifted by `day_start_hour` (default 4 → a day runs 04:00–03:59
+local). `questDay(now, tz, startHour)` is a pure, tested function; the server
+clock's zone is never used.
+
+**States.**
+
+```
+            start            complete (tx + reward)
+available ───────► in_progress ───────────► completed   (terminal)
+    │                   │
+    │ cancel            │ cancel
+    ├───────────────────┴──────► cancelled  (terminal, no XP)
+    │ day rollover
+    └───────────────────────────► expired    (terminal, no XP, history kept)
+```
+`available → completed` is also allowed directly. Rewards are granted
+automatically on completion (no separate "claimed" state for quests).
+Weekly challenges add a `reward_claimed_at` timestamp because the reward is
+granted when the target is first reached.
+
+**Generation (lazy + idempotent).** On any `/system` load the server calls
+`ensureDailyQuests(userId, now)`:
+1. Compute today's quest day.
+2. `UPDATE player_quest SET status='expired' WHERE kind='daily' AND quest_date < today AND status IN ('available','in_progress')`.
+3. `INSERT … SELECT active daily templates … ON CONFLICT (user_id, template_id, quest_date) DO NOTHING`.
+
+Concurrent loads therefore cannot duplicate a day's quests. Missed quests
+never touch the ledger, so lifetime XP is never reduced. A scheduled job
+(`/api/cron/daily`) can call the same function later for notifications.
+
+## 7. Reward ledger & duplicate prevention
+
+`completeQuest(userId, questId, input)` runs in **one transaction**:
+
+1. `SELECT … FROM player_quest WHERE id = $1 AND user_id = $2 FOR UPDATE` —
+   ownership and row lock (concurrent requests serialize here).
+2. Reject unless status ∈ {available, in_progress} and quest_date is today
+   (or within the weekly window).
+3. Insert `quest_completion` (unique on `player_quest_id`).
+4. Compute XP from the **snapshotted** quest reward, apply daily caps.
+5. Insert `xp_ledger` with `idempotency_key = 'quest:' || questId`
+   (`ON CONFLICT DO NOTHING`; zero rows ⇒ already rewarded ⇒ no-op).
+6. Insert attribute gains (`attribute_ledger`, key `quest:{id}:{attr}`).
+7. `UPDATE player_progress SET total_xp = total_xp + amount` and recompute
+   level/rank with the pure functions; insert `level_event` if changed.
+8. Evaluate achievements (each unlock is its own idempotency key).
+9. Insert notifications with `dedupe_key`.
+10. Commit, return the new status snapshot.
+
+Three independent guards — row lock, unique completion row, unique ledger
+key — mean double clicks, refreshes, retries and parallel requests award XP
+exactly once. The client never sends an XP amount, level, or rank.
+
+## 8. Route map
+
+| Route | Purpose |
+|---|---|
+| `/` | Landing |
+| `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email` | Auth |
+| `/onboarding` | Player setup (skippable) |
+| `/system` | Status window (dashboard) |
+| `/system/quests`, `/system/quests/[id]` | Daily, weekly, custom quests |
+| `/system/habits` · `/system/focus` · `/system/skills` · `/system/achievements` · `/system/goals` · `/system/progress` · `/system/notifications` · `/system/profile` · `/system/settings` | Modules |
+| `/admin/*` | Deferred until global templates need editing |
+| `/api/auth/[...all]` | Better Auth |
+
+## 9. Implementation checklist
+
+- [x] Phase 1 — Architecture, schema, formulas, lifecycle, ledger strategy (this doc)
+- [x] Phase 2 — Next.js + TS strict + Tailwind, Drizzle + Postgres, full schema & migration,
+      Better Auth (register/login/logout/verify/reset), onboarding → player + attributes + starter quests,
+      visual system + app shell, progression/time pure modules with unit tests
+- [ ] Phase 3 — Reward service, ledger, level events, consistency check, integration tests (PGlite)
+- [ ] Phase 4 — Daily generation, custom quest builder, completion flow, idempotency/concurrency tests
+- [ ] Phase 5 — Status window details, level-up panel, recent activity
+- [ ] Phase 6 — Habits & streaks
+- [ ] Phase 7 — Achievements, titles, skill tree, rank history
+- [ ] Phase 8 — Focus timer, goals & milestones
+- [ ] Phase 9 — Analytics, notifications
+- [ ] Phase 10 — QA, Playwright E2E, accessibility pass
+- [ ] Phase 11 — Deployment docs
