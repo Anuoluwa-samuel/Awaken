@@ -15,6 +15,13 @@
       "when": 1793131530307,
       "tag": "0001_weekly_any_category",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793384268226,
+      "tag": "0002_habits_v2",
+      "breakpoints": true
     }
   ]
 }

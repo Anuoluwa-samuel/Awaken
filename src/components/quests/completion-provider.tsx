@@ -7,6 +7,7 @@ import type { ProgressionChange } from "@/lib/progression/rewards";
 import { CompletionPanel } from "./completion-panel";
 
 const Ctx = createContext<(r: CompletionResult) => void>(() => {});
+const LevelUpCtx = createContext<(c: ProgressionChange) => void>(() => {});
 
 /**
  * Hosts the completion message (and the level-up panel when one happened) above the page,
@@ -23,7 +24,7 @@ export function CompletionProvider({ children }: { children: ReactNode }) {
   const closeLevelUp = useCallback(() => setLevelUp(null), []);
   return (
     <Ctx value={show}>
-      {children}
+      <LevelUpCtx value={setLevelUp}>{children}</LevelUpCtx>
       {result ? <CompletionPanel key={result.questId} result={result} onClose={close} /> : null}
       {levelUp ? <LevelUpPanel key={levelUp.toXp} change={levelUp} onClose={closeLevelUp} /> : null}
     </Ctx>
@@ -31,3 +32,5 @@ export function CompletionProvider({ children }: { children: ReactNode }) {
 }
 
 export const useShowCompletion = () => useContext(Ctx);
+/** For rewards that aren't quest completions (e.g. habit check-ins) but still level up. */
+export const useShowLevelUp = () => useContext(LevelUpCtx);

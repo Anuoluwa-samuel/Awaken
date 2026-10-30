@@ -22,6 +22,7 @@ import { canTransition, OPEN_STATUSES } from "@/lib/progression/quest-state";
 import { applyXp, resolveQuestXp, type ProgressionChange } from "@/lib/progression/rewards";
 import { dayOfWeek, questDay, questDayBounds, type QuestDate } from "@/lib/time";
 import type { CustomQuestInput } from "@/lib/validation/quest";
+import { recordLinkedHabitCheckIns } from "./habit-links";
 import { grantAttribute, grantXp, lockProgress } from "./rewards";
 import { advanceWeeklyChallenges, type WeeklyAdvance } from "./weekly";
 
@@ -315,6 +316,8 @@ export async function completeQuest(
       .update(playerQuest)
       .set({ status: "completed", completedAt: now })
       .where(eq(playerQuest.id, quest.id));
+    // Habits standing for this quest are checked in too (no extra reward).
+    if (quest.templateId) await recordLinkedHabitCheckIns(tx, userId, quest.templateId, clock.today, now);
 
     // 6. XP (unique ledger key — the third guard; daily cap applied inside).
     const xp = await grantXp(tx, {

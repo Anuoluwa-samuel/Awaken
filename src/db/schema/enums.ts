@@ -33,6 +33,7 @@ export const challengeStatusEnum = pgEnum("challenge_status", [
 ]);
 export const xpEventEnum = pgEnum("xp_event", [
   "quest_completed",
+  "habit_completed",
   "weekly_completed",
   "achievement_unlocked",
   "focus_completed",

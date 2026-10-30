@@ -104,3 +104,15 @@ export const QUEST_LIMITS = {
 
 /** Weekly challenge reward = this multiple of the difficulty default (uncapped). */
 export const WEEKLY_XP_MULTIPLIER = 2;
+
+export const HABIT_RULES = {
+  /** XP for a check-in that counts toward the schedule (counts toward the daily quest-XP cap). */
+  xp: 5,
+  /** Attribute points for a counted check-in (subject to the daily attribute cap). */
+  attributePoints: 1,
+  maxActiveHabits: 20,
+  maxNameLength: 60,
+  maxDescriptionLength: 300,
+  /** Days of history loaded for streaks, rates and the heatmap. */
+  historyDays: 400,
+} as const;

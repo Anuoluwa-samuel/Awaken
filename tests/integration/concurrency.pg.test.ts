@@ -155,4 +155,36 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     expect(weeklyRewards).toHaveLength(1);
     expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
   });
+
+  it("checks a habit in once when 15 check-ins race", async () => {
+    const { checkInHabit, createHabit } = await import("@/server/services/habits");
+    const userId = await newPlayer();
+    const h = await createHabit(db, userId, { name: "Water", description: "", category: "wellbeing", attribute: null, scheduleType: "days", days: [0, 1, 2, 3, 4, 5, 6], timesPerWeek: null, linkedTemplateId: null }, NOON);
+    const results = await Promise.all(Array.from({ length: 15 }, () => checkInHabit(db, userId, h.id, NOON)));
+    expect(results.filter((r) => r.status === "checked_in")).toHaveLength(1);
+    const ledger = (await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) })).filter((l) => l.eventType === "habit_completed");
+    expect(ledger).toHaveLength(1);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+  });
+
+  it("does not deadlock or double-pay when a linked check-in and its quest completion race", async () => {
+    const { checkInHabit, createHabit, listLinkableTemplates } = await import("@/server/services/habits");
+    for (let round = 0; round < 5; round++) {
+      const userId = await newPlayer(["learning"]);
+      const study = (await listLinkableTemplates(db, userId)).find((t) => t.category === "learning")!;
+      const h = await createHabit(db, userId, { name: "Study", description: "", category: "learning", attribute: null, scheduleType: "days", days: [0, 1, 2, 3, 4, 5, 6], timesPerWeek: null, linkedTemplateId: study.id }, NOON);
+      const quest = (await listQuestsForDay(db, userId, "2026-10-27")).find((q) => q.templateId === study.id)!;
+      await Promise.all([
+        checkInHabit(db, userId, h.id, NOON),
+        completeQuest(db, userId, quest.id, { now: NOON }),
+        checkInHabit(db, userId, h.id, NOON),
+        completeQuest(db, userId, quest.id, { now: NOON }),
+      ]);
+      const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+      expect(ledger.map((l) => l.eventType)).toEqual(["quest_completed"]);
+      const { habitCompletion } = await import("@/db/schema");
+      expect(await db.query.habitCompletion.findMany({ where: eq(habitCompletion.habitId, h.id) })).toHaveLength(1);
+      expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+    }
+  });
 });

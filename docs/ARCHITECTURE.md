@@ -285,6 +285,44 @@ flooded by routine activity.
 - **Profile** (`/system/profile`): rank ladder with thresholds and progress to the next rank,
   rank-up history, level history, lifetime counters.
 
+## 6c. Habits & streaks (Phase 6)
+
+**Schedules.** *Specific days* (weekdays chosen; other days are rest days) or *N times per
+week* (any days, Monday–Sunday weeks). Each habit has a `start_date` (the player's quest day it
+was created); nothing earlier counts against it. All dates are quest days in the player's zone.
+
+**Streaks** (`src/lib/progression/habits.ts`, pure and unit-tested):
+
+| | Specific days | Times per week |
+|---|---|---|
+| Unit | scheduled days | weeks |
+| Current | completed scheduled days in a row, walking back from today; rest days are skipped, never break it | consecutive weeks that met the target |
+| Today / this week | never counted as missed while still in progress | included once the target is met |
+| Longest | best run since the start date | best run of weeks |
+| Rate | completed ÷ scheduled days over the last 30 days | weeks met over the last 4 complete weeks |
+
+Missing a day can reset a streak; it never changes XP. Copy is encouraging ("Fresh start today —
+your best is 9 days"), never punitive.
+
+**Rewards.** A check-in that *counts toward the schedule* (a scheduled weekday, or within the
+weekly target) earns 5 XP (`habit_completed`, counted in the daily quest-XP cap) and 1 point of the
+habit's attribute. Rest-day and over-target check-ins are recorded with no reward. Key:
+`habit:{habitId}:{questDay}`. One check-in per habit per quest day (unique index).
+
+**Habits linked to a quest** (a scheduled daily template of the player's):
+- Checking in completes today's open quest from that template (`method = habit`) and only the
+  quest's rewards apply — no habit XP.
+- Completing that quest directly records the habit check-in, again with no extra reward.
+- If no open linked quest exists today, the check-in falls back to the normal habit reward.
+
+**Locks.** Check-in locks the habit row `FOR NO KEY UPDATE`, then (if linked) quest → player.
+Quest completion inserts the linked check-in, whose FK check takes `KEY SHARE` on the habit
+row; `NO KEY UPDATE` is compatible with that, which avoids a habit ↔ quest deadlock that the
+real-Postgres race test reproduced with `FOR UPDATE`.
+
+Limits: 20 active habits. Archiving keeps history and XP. Reminders are not delivered yet
+(notification delivery is Phase 9), so the UI does not offer them.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
@@ -320,6 +358,7 @@ Idempotency keys (one per reward-earning fact):
 | Quest attribute gain | `quest:{playerQuestId}:attr:{attribute}` |
 | Weekly challenge | `weekly:{challengeId}` |
 | Achievement | `achievement:{userId}:{code}` |
+| Habit check-in | `habit:{habitId}:{questDay}` (+ `:attr`) |
 | Focus session | `focus:{sessionId}` |
 
 Quest completion additionally locks the `player_quest` row and inserts a
@@ -359,7 +398,7 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 3 — Reward service, ledger, level events, notifications, consistency check + repair, integration and concurrency tests
 - [x] Phase 4 — Completion flow, custom quest builder + safeguards, weekly challenges, quest detail & reward history, idempotency/concurrency tests
 - [x] Phase 5 — Status window (rank insignia, rank progress, skill points), level-up panel, activity feed, profile with rank ladder and history
-- [ ] Phase 6 — Habits & streaks
+- [x] Phase 6 — Habits (day / weekly schedules, rest days), streaks, rates, heatmap, quest links with single-reward rule, mobile menu
 - [ ] Phase 7 — Achievements, titles, skill tree, rank history
 - [ ] Phase 8 — Focus timer, goals & milestones
 - [ ] Phase 9 — Analytics, notifications

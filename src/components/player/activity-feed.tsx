@@ -1,4 +1,4 @@
-import { Award, CalendarCheck, ChevronsUp, History, ScrollText, Timer, Wrench, type LucideIcon } from "lucide-react";
+import { Award, CalendarCheck, ChevronsUp, History, Repeat, ScrollText, Timer, Wrench, type LucideIcon } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RANKS } from "@/lib/progression/config";
 import { cn } from "@/lib/utils/cn";
@@ -6,6 +6,7 @@ import type { ActivityItem } from "@/server/services/dashboard";
 
 const XP_ICON: Record<Extract<ActivityItem, { kind: "xp" }>["eventType"], LucideIcon> = {
   quest_completed: ScrollText,
+  habit_completed: Repeat,
   weekly_completed: CalendarCheck,
   achievement_unlocked: Award,
   focus_completed: Timer,

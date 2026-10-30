@@ -285,8 +285,12 @@ export const habit = pgTable(
     description: text("description").notNull().default(""),
     category: categoryEnum("category").notNull(),
     attribute: attributeEnum("attribute").notNull(),
-    /** 0 = Sunday … 6 = Saturday. Days not listed are rest days. */
+    /** 0 = Sunday … 6 = Saturday. Days not listed are rest days. All 7 in weekly-count mode. */
     scheduleDays: smallint("schedule_days").array().notNull(),
+    /** When set, the habit is "N times per week" on any days instead of fixed weekdays. */
+    timesPerWeek: smallint("times_per_week"),
+    /** The player's local date the habit started counting from (streaks never look earlier). */
+    startDate: date("start_date", { mode: "string" }).notNull(),
     linkedTemplateId: text("linked_template_id").references(() => questTemplate.id, {
       onDelete: "set null",
     }),
@@ -295,7 +299,12 @@ export const habit = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("habit_user_idx").on(t.userId)],
+  (t) => [
+    index("habit_user_idx").on(t.userId),
+    index("habit_linked_template_idx").on(t.userId, t.linkedTemplateId),
+    check("habit_has_schedule", sql`cardinality(${t.scheduleDays}) > 0`),
+    check("habit_times_per_week_range", sql`${t.timesPerWeek} is null or ${t.timesPerWeek} between 1 and 7`),
+  ],
 );
 
 export const habitCompletion = pgTable(

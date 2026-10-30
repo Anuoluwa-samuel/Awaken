@@ -26,7 +26,7 @@ import { notify } from "./notifications";
 export type XpEvent = (typeof xpLedger.$inferInsert)["eventType"];
 
 /** Events that count toward the daily quest-XP cap. */
-const CAPPED_EVENTS: XpEvent[] = ["quest_completed", "focus_completed"];
+const CAPPED_EVENTS: XpEvent[] = ["quest_completed", "habit_completed", "focus_completed"];
 
 export type XpGrant = {
   userId: string;
