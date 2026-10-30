@@ -181,10 +181,39 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
         completeQuest(db, userId, quest.id, { now: NOON }),
       ]);
       const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
-      expect(ledger.map((l) => l.eventType)).toEqual(["quest_completed"]);
+      expect(ledger.map((l) => l.eventType).sort()).toEqual(["achievement_unlocked", "quest_completed"]);
       const { habitCompletion } = await import("@/db/schema");
       expect(await db.query.habitCompletion.findMany({ where: eq(habitCompletion.habitId, h.id) })).toHaveLength(1);
       expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
     }
+  });
+
+  it("unlocks a skill and spends its points once under 12 parallel requests", async () => {
+    const { unlockSkill } = await import("@/server/services/skills");
+    const { playerSkill } = await import("@/db/schema");
+    const userId = await newPlayer();
+    await db.transaction((tx) =>
+      grantXp(tx, { userId, eventType: "goal_completed", sourceType: "test", amount: 220, reason: "boost", idempotencyKey: `boost:${userId}`, now: NOON }),
+    ); // level 3 → 2 points
+    const results = await Promise.allSettled(Array.from({ length: 12 }, () => unlockSkill(db, userId, "early-bird", NOON)));
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await db.query.playerSkill.findMany({ where: eq(playerSkill.userId, userId) })).toHaveLength(1);
+    const progress = await db.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) });
+    expect(progress).toMatchObject({ skillPointsEarned: 2, skillPointsSpent: 1 });
+  });
+
+  it("grants an achievement once when parallel evaluations race", async () => {
+    const { evaluateAchievements } = await import("@/server/services/achievements");
+    const userId = await newPlayer(["learning"]);
+    const [quest] = await listQuestsForDay(db, userId, "2026-10-27");
+    await Promise.all([
+      completeQuest(db, userId, quest.id, { now: NOON }),
+      ...Array.from({ length: 10 }, () => db.transaction((tx) => evaluateAchievements(tx, userId, NOON))),
+    ]);
+    const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+    expect(ledger.filter((l) => l.eventType === "achievement_unlocked")).toHaveLength(1);
+    const notes = await db.query.notification.findMany({ where: eq(notification.userId, userId) });
+    expect(notes.filter((n) => n.type === "achievement")).toHaveLength(1);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
   });
 });

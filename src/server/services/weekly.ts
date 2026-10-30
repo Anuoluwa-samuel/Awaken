@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
-import { playerProfile, questTemplate, weeklyChallenge } from "@/db/schema";
+import { playerProfile, playerSkill, questTemplate, weeklyChallenge } from "@/db/schema";
 import { SYSTEM_QUEST_TEMPLATES } from "@/db/seed-data";
 import type { AppDb } from "@/db/types";
 import { DIFFICULTY_XP, WEEKLY_XP_MULTIPLIER, type Category } from "@/lib/progression/config";
@@ -13,9 +13,16 @@ import { grantXp } from "./rewards";
 // the target is reached — keyed `weekly:{challengeId}`, so it can never repeat.
 
 /** Which system weekly templates a player gets, from their focus areas. */
-export function weeklyTemplateKeysFor(focusAreas: readonly Category[]): string[] {
+export function weeklyTemplateKeysFor(
+  focusAreas: readonly Category[],
+  unlockedSkills: ReadonlySet<string> = new Set(),
+): string[] {
   return SYSTEM_QUEST_TEMPLATES.filter(
-    (t) => t.cadence === "weekly" && (t.weeklyDefault || focusAreas.includes(t.category)),
+    (t) =>
+      t.cadence === "weekly" &&
+      (t.requiredSkill
+        ? unlockedSkills.has(t.requiredSkill)
+        : t.weeklyDefault || focusAreas.includes(t.category)),
   ).map((t) => t.key);
 }
 
@@ -39,7 +46,11 @@ export async function ensureWeeklyChallenges(db: AppDb, userId: string, now = ne
         ),
       );
 
-    const keys = weeklyTemplateKeysFor(profile.focusAreas);
+    const skills = await tx
+      .select({ code: playerSkill.skillCode })
+      .from(playerSkill)
+      .where(eq(playerSkill.userId, userId));
+    const keys = weeklyTemplateKeysFor(profile.focusAreas, new Set(skills.map((s) => s.code)));
     if (keys.length === 0) return week;
     const templates = await tx
       .select()

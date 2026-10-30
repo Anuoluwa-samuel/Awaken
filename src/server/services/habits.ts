@@ -3,6 +3,7 @@ import {
   habit,
   habitCompletion,
   playerProfile,
+  playerProgress,
   playerQuest,
   playerQuestSchedule,
   questTemplate,
@@ -10,11 +11,12 @@ import {
 import type { AppDb } from "@/db/types";
 import { CATEGORY_INFO, HABIT_RULES, type Attribute } from "@/lib/progression/config";
 import { checkInCounts, habitCalendar, habitStats, scheduleOf } from "@/lib/progression/habits";
-import type { ProgressionChange } from "@/lib/progression/rewards";
+import { applyXp, type ProgressionChange } from "@/lib/progression/rewards";
 import { addDays, questDay, type QuestDate } from "@/lib/time";
 import type { HabitInput } from "@/lib/validation/habit";
+import { evaluateAchievements, type UnlockedAchievement } from "./achievements";
 import { completeQuest, type CompletionResult } from "./quests";
-import { grantAttribute, grantXp } from "./rewards";
+import { grantAttribute, grantXp, lockProgress } from "./rewards";
 
 // Habits — docs/ARCHITECTURE.md §6c.
 //
@@ -118,8 +120,15 @@ export type CheckInResult =
       xp: { granted: number; note: string | null };
       attributes: { attribute: Attribute; granted: number }[];
       levelChange: ProgressionChange | null;
+      achievements: UnlockedAchievement[];
       quest: CompletionResult | null;
     };
+
+async function levelChangeSince(tx: AppDb, userId: string, beforeXp: number) {
+  const after = await tx.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) });
+  const change = applyXp(beforeXp, (after?.totalXp ?? beforeXp) - beforeXp);
+  return change.levelsGained > 0 ? change : null;
+}
 
 /** Records today's check-in exactly once and applies the documented reward rule. */
 export async function checkInHabit(db: AppDb, userId: string, habitId: string, now = new Date()): Promise<CheckInResult> {
@@ -168,11 +177,13 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
           xp: { granted: result.xp.granted, note: result.xp.note },
           attributes: result.attributes,
           levelChange: result.levelChange,
+          achievements: result.achievements,
           quest: result,
         };
       }
     }
 
+    const before = await lockProgress(tx, userId);
     const history = await tx
       .select({ date: habitCompletion.localDate })
       .from(habitCompletion)
@@ -187,6 +198,7 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
     if (!inserted) return { status: "already_checked_in", date: today };
 
     if (!counted) {
+      const achievements = await evaluateAchievements(tx, userId, now);
       return {
         status: "checked_in",
         date: today,
@@ -199,7 +211,8 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
             : "Rest day — recorded, no reward needed.",
         },
         attributes: [],
-        levelChange: null,
+        levelChange: await levelChangeSince(tx, userId, before.totalXp),
+        achievements,
         quest: null,
       };
     }
@@ -223,6 +236,7 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
       idempotencyKey: `habit:${h.id}:${today}:attr`,
       now,
     });
+    const achievements = await evaluateAchievements(tx, userId, now);
     return {
       status: "checked_in",
       date: today,
@@ -230,7 +244,8 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
       counted: true,
       xp: xp.status === "granted" ? { granted: xp.granted, note: xp.capReason } : { granted: 0, note: "Already rewarded." },
       attributes: attr.status === "granted" ? [{ attribute: h.attribute, granted: attr.granted }] : [],
-      levelChange: xp.status === "granted" && xp.change.levelsGained > 0 ? xp.change : null,
+      levelChange: await levelChangeSince(tx, userId, before.totalXp),
+      achievements,
       quest: null,
     };
   });

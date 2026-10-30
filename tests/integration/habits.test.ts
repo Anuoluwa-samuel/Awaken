@@ -143,14 +143,16 @@ describe("habits linked to quests", () => {
     const { userId, h, quest } = await linkedSetup();
     const r = await checkInHabit(db, userId, h.id, TUE);
     expect(r).toMatchObject({ status: "checked_in", via: "quest", xp: { granted: 25 } });
+    // Quest reward once, plus the First Blood achievement — never a habit reward.
     const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
-    expect(ledger.map((l) => l.eventType)).toEqual(["quest_completed"]);
+    expect(ledger.map((l) => l.eventType).sort()).toEqual(["achievement_unlocked", "quest_completed"]);
+    expect(r.status === "checked_in" && r.achievements.map((a) => a.code)).toEqual(["first-blood"]);
     const completion = await db.query.questCompletion.findFirst({ where: (c, { eq }) => eq(c.playerQuestId, quest.id) });
     expect(completion?.method).toBe("habit");
     // Completing the quest again or checking in again changes nothing.
     expect((await completeQuest(db, userId, quest.id, { now: TUE })).status).toBe("already_completed");
     expect(await checkInHabit(db, userId, h.id, TUE)).toMatchObject({ status: "already_checked_in" });
-    expect((await progressOf(userId)).totalXp).toBe(25);
+    expect((await progressOf(userId)).totalXp).toBe(25 + 10);
   });
 
   it("completing the quest directly records the habit check-in without extra XP", async () => {
@@ -159,7 +161,9 @@ describe("habits linked to quests", () => {
     const checkIns = await db.query.habitCompletion.findMany({ where: eq(habitCompletion.habitId, h.id) });
     expect(checkIns.map((c) => c.localDate)).toEqual(["2026-10-27"]);
     expect(await checkInHabit(db, userId, h.id, TUE)).toMatchObject({ status: "already_checked_in" });
-    expect((await progressOf(userId)).totalXp).toBe(25);
+    expect((await progressOf(userId)).totalXp).toBe(25 + 10); // quest + First Blood
+    const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+    expect(ledger.some((l) => l.eventType === "habit_completed")).toBe(false);
   });
 
   it("falls back to the habit reward when there is no open linked quest today", async () => {

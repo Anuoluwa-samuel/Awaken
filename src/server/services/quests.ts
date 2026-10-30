@@ -22,6 +22,7 @@ import { canTransition, OPEN_STATUSES } from "@/lib/progression/quest-state";
 import { applyXp, resolveQuestXp, type ProgressionChange } from "@/lib/progression/rewards";
 import { dayOfWeek, questDay, questDayBounds, type QuestDate } from "@/lib/time";
 import type { CustomQuestInput } from "@/lib/validation/quest";
+import { evaluateAchievements, type UnlockedAchievement } from "./achievements";
 import { recordLinkedHabitCheckIns } from "./habit-links";
 import { grantAttribute, grantXp, lockProgress } from "./rewards";
 import { advanceWeeklyChallenges, type WeeklyAdvance } from "./weekly";
@@ -100,6 +101,8 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
           eq(questTemplate.cadence, "daily"),
           // A player may only schedule system templates or their own.
           sql`(${questTemplate.ownerUserId} is null or ${questTemplate.ownerUserId} = ${userId})`,
+          // Skill-gated templates only once the skill is unlocked.
+          sql`(${questTemplate.requiredSkill} is null or exists (select 1 from player_skill ps where ps.user_id = ${userId} and ps.skill_code = ${questTemplate.requiredSkill}))`,
           sql`(cardinality(${playerQuestSchedule.days}) = 0 or ${dow} = any(${playerQuestSchedule.days}))`,
         ),
       );
@@ -229,6 +232,7 @@ export type CompletionResult = {
   attributes: { attribute: Attribute; granted: number }[];
   levelChange: ProgressionChange | null;
   weekly: WeeklyAdvance[];
+  achievements: UnlockedAchievement[];
   player: { level: LevelProgress; rank: RankProgress };
 };
 
@@ -263,6 +267,7 @@ export async function completeQuest(
         attributes: [],
         levelChange: null,
         weekly: [],
+        achievements: [],
         player: await playerSnapshot(tx, userId),
       };
     }
@@ -361,7 +366,10 @@ export async function completeQuest(
     // 8. Weekly challenges.
     const weekly = await advanceWeeklyChallenges(tx, userId, quest.category, now);
 
-    // Level change across everything this completion granted (quest + weekly rewards).
+    // 9. Achievements (their XP can level the player up, so measure the level change after).
+    const achievements = await evaluateAchievements(tx, userId, now);
+
+    // Level change across everything this completion granted (quest + weekly + achievements).
     const after = await tx.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) });
     const gained = (after?.totalXp ?? before.totalXp) - before.totalXp;
     const change = applyXp(before.totalXp, gained);
@@ -377,6 +385,7 @@ export async function completeQuest(
       attributes,
       levelChange: change.levelsGained > 0 ? change : null,
       weekly,
+      achievements,
       player: await playerSnapshot(tx, userId),
     };
   });

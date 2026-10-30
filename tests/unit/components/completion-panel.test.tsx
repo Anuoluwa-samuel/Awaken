@@ -17,6 +17,7 @@ const base: CompletionResult = {
   ],
   levelChange: null,
   weekly: [],
+  achievements: [],
   player: { level: levelProgress(25), rank: rankProgress(25) },
 };
 
@@ -27,6 +28,18 @@ describe("CompletionPanel", () => {
     expect(screen.getByText("+25 XP")).toBeInTheDocument();
     expect(screen.getByText("+2 INT · +1 DIS")).toBeInTheDocument();
     expect(screen.queryByText(/Level up/)).not.toBeInTheDocument();
+  });
+
+  it("announces unlocked achievements with their rewards", () => {
+    render(
+      <CompletionPanel
+        result={{ ...base, achievements: [{ code: "first-blood", name: "First Blood", icon: "swords", xpReward: 10, titleReward: null }] }}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("Achievement unlocked")).toBeInTheDocument();
+    expect(screen.getByText(/First Blood/)).toBeInTheDocument();
+    expect(screen.getByText("+10 XP")).toBeInTheDocument();
   });
 
   it("merges gains to the same attribute", () => {

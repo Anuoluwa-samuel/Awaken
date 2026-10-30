@@ -275,7 +275,8 @@ describe("weekly challenges", () => {
   it("reports a level-up caused by the weekly reward, not just the quest XP", async () => {
     const userId = await newPlayer(["fitness"]);
     let last = null;
-    // 3 workouts = 75 XP (still level 1); the third also completes the weekly (+100) → 175 XP.
+    // 3 workouts = 75 XP + First Blood 10 (still level 1); the third also completes the
+    // weekly (+100) and unlocks Consistent (+25) → 210 XP.
     for (const day of ["2026-10-27", "2026-10-28", "2026-10-29"]) {
       const now = new Date(`${day}T11:00:00Z`);
       await ensureDailyQuests(db, userId, now);
@@ -283,7 +284,8 @@ describe("weekly challenges", () => {
       last = await completeQuest(db, userId, workout.id, { now });
     }
     expect(last!.xp.granted).toBe(25);
-    expect(last!.levelChange).toMatchObject({ fromXp: 50, toXp: 175, fromLevel: 1, toLevel: 2 });
+    expect(last!.levelChange).toMatchObject({ fromXp: 60, toXp: 210, fromLevel: 1, toLevel: 2 });
+    expect(last!.achievements.map((a) => a.code)).toEqual(["consistent"]);
     expect(last!.player.level.level).toBe(2);
   });
 

@@ -60,7 +60,13 @@ export function HabitCheckIn({
             ].filter(Boolean);
             setMessage({
               tone: "ok",
-              text: [d.via === "quest" ? "Linked quest completed." : null, gains.join(" · ") || null, d.xp.note]
+              text: [
+                d.via === "quest" ? "Linked quest completed." : null,
+                gains.join(" · ") || null,
+                d.xp.note,
+                // Quest-path achievements show in the completion message instead.
+                !d.quest && d.achievements.length ? `Achievement unlocked: ${d.achievements.map((a) => a.name).join(", ")}.` : null,
+              ]
                 .filter(Boolean)
                 .join(" "),
             });

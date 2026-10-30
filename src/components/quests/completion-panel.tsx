@@ -2,6 +2,7 @@
 
 import { Sparkles, X } from "lucide-react";
 import { useEffect } from "react";
+import { AchievementIcon } from "@/components/achievements/achievement-icon";
 import { ATTRIBUTE_INFO, type Attribute } from "@/lib/progression/config";
 import type { CompletionResult } from "@/server/services/quests";
 
@@ -59,6 +60,19 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
                 Weekly challenge complete: {w.title} · +{w.xpGranted} XP
               </p>
             ))}
+          {result.achievements.map((a) => (
+            <div key={a.code} className="mt-2 flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+              <AchievementIcon name={a.icon} className="size-4 shrink-0 text-warning" />
+              <p className="text-sm">
+                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.15em] text-warning">
+                  Achievement unlocked
+                </span>{" "}
+                {a.name}
+                {a.xpReward ? <span className="font-mono text-glow"> +{a.xpReward} XP</span> : null}
+                {a.titleReward ? <span className="text-arcane"> · Title: {a.titleReward}</span> : null}
+              </p>
+            </div>
+          ))}
           {result.levelChange ? (
             <div className="mt-3 flex items-center gap-2 rounded-md border border-glow/50 bg-glow-soft px-3 py-2">
               <Sparkles aria-hidden className="size-4 text-glow" />

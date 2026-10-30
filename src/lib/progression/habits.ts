@@ -166,3 +166,26 @@ export function habitCalendar(
     }),
   );
 }
+
+export type WeekdayInsight = { day: number; label: string; done: number; due: number | null };
+
+/**
+ * Check-ins by weekday over the calendar window (Consistency skill). For fixed-day habits
+ * `due` counts that weekday's scheduled days; any-day habits have no due days (null).
+ */
+export function weekdayInsights(s: HabitSchedule, calendar: HeatCell[][]): { days: WeekdayInsight[]; strongest: string | null } {
+  const days: WeekdayInsight[] = [1, 2, 3, 4, 5, 6, 0].map((day) => ({
+    day,
+    label: DAY_SHORT[day],
+    done: 0,
+    due: s.kind === "days" ? 0 : null,
+  }));
+  for (const cell of calendar.flat()) {
+    const entry = days.find((d) => d.day === dayOfWeek(cell.date))!;
+    if (cell.state === "done") entry.done++;
+    if (entry.due !== null && (cell.state === "done" || cell.state === "missed") && isScheduledDay(s, cell.date)) entry.due++;
+  }
+  const score = (d: WeekdayInsight) => (d.due ? d.done / d.due : d.due === null ? d.done : -1);
+  const best = [...days].filter((d) => d.done > 0).sort((a, b) => score(b) - score(a) || b.done - a.done)[0];
+  return { days, strongest: best?.label ?? null };
+}

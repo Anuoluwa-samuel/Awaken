@@ -51,6 +51,7 @@ describe("CompletionProvider", () => {
     attributes: [],
     levelChange,
     weekly: [],
+    achievements: [],
     player: { level: levelProgress(110), rank: rankProgress(110) },
   });
 

@@ -323,6 +323,40 @@ real-Postgres race test reproduced with `FOR UPDATE`.
 Limits: 20 active habits. Archiving keeps history and XP. Reminders are not delivered yet
 (notification delivery is Phase 9), so the UI does not offer them.
 
+## 6d. Achievements, titles & skills (Phase 7)
+
+**Achievements** (`src/server/services/achievements.ts`). Criteria are typed
+(`quests_completed`, `level`, `category_quests`, `weekly_completed`, `habit_streak`,
+`habit_checkins`, `skills_unlocked`) and evaluated by a pure function against metrics computed
+from persisted records. `evaluateAchievements` runs inside the transaction of every reward flow
+(quest completion, habit check-in, skill unlock) and once per request in the player context
+(a catch-up for records that predate an achievement). Each unlock:
+`player_achievement` PK → XP via ledger key `achievement:{user}:{code}` (uncapped) → title row →
+notification (dedupe key). It repeats until stable, because achievement XP can level the
+player into a level achievement. Completion results report unlocks and measure the level change
+after them.
+
+**Titles** come from achievements. Equipping validates ownership on the server and only sets
+`player_profile.equipped_title`; it grants nothing and changes no progression.
+
+**Skills** (`src/server/services/skills.ts`). One skill point per level gained. Unlocking runs
+under the player lock and checks, via the shared pure `skillBlocker`: not already unlocked,
+feature available, level requirement, prerequisite, enough points. The `player_skill` PK is the
+backstop against double unlocks. Effects add content and never change XP values:
+
+| Skill | Level | Cost | Requires | Effect |
+|---|---|---|---|---|
+| Early Bird | 3 | 1 | — | schedules the *morning routine* daily quest |
+| Consistency | 5 | 1 | Early Bird | weekday insights on each habit |
+| Deep Focus | 5 | 1 | — | 50/90-min focus sessions — **not unlockable until Focus ships (Phase 8)** |
+| Quick Learner | 8 | 2 | Early Bird | *Advanced study block* weekly challenge (6 learning quests) |
+| Creator | 10 | 2 | Consistency | *Build something for 45 minutes* daily quest |
+
+Skill-gated templates carry `quest_template.required_skill`; daily generation and weekly
+assignment skip them unless the player has the skill, even if a schedule row exists.
+
+**Rank-up history** is shown on `/system/profile` (Phase 5), sourced from `level_event`.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
@@ -357,7 +391,7 @@ Idempotency keys (one per reward-earning fact):
 | Quest completion | `quest:{playerQuestId}` |
 | Quest attribute gain | `quest:{playerQuestId}:attr:{attribute}` |
 | Weekly challenge | `weekly:{challengeId}` |
-| Achievement | `achievement:{userId}:{code}` |
+| Achievement | `achievement:{userId}:{code}` (uncapped) |
 | Habit check-in | `habit:{habitId}:{questDay}` (+ `:attr`) |
 | Focus session | `focus:{sessionId}` |
 
@@ -399,7 +433,7 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 4 — Completion flow, custom quest builder + safeguards, weekly challenges, quest detail & reward history, idempotency/concurrency tests
 - [x] Phase 5 — Status window (rank insignia, rank progress, skill points), level-up panel, activity feed, profile with rank ladder and history
 - [x] Phase 6 — Habits (day / weekly schedules, rest days), streaks, rates, heatmap, quest links with single-reward rule, mobile menu
-- [ ] Phase 7 — Achievements, titles, skill tree, rank history
+- [x] Phase 7 — Achievement engine + catch-up, titles, skill tree with real effects, unlock messages, races tested
 - [ ] Phase 8 — Focus timer, goals & milestones
 - [ ] Phase 9 — Analytics, notifications
 - [ ] Phase 10 — QA, Playwright E2E, accessibility pass

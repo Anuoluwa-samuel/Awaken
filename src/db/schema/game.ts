@@ -13,6 +13,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { AchievementCriteria, SkillEffect } from "@/lib/progression/achievements";
 import { user } from "./auth";
 import {
   attributeEnum,
@@ -135,6 +136,8 @@ export const questTemplate = pgTable(
     estimatedMinutes: smallint("estimated_minutes"),
     cadence: questCadenceEnum("cadence").notNull(),
     weeklyTarget: smallint("weekly_target"),
+    /** Skill code that must be unlocked before this template is offered. */
+    requiredSkill: text("required_skill"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },
@@ -334,7 +337,9 @@ export const skill = pgTable("skill", {
   requiredLevel: integer("required_level").notNull().default(1),
   prerequisiteCode: text("prerequisite_code"),
   cost: integer("cost").notNull().default(1),
-  effect: jsonb("effect").$type<Record<string, unknown>>(),
+  /** False while the feature the effect needs doesn't exist yet; such skills can't be unlocked. */
+  available: boolean("available").notNull().default(true),
+  effect: jsonb("effect").$type<SkillEffect>().notNull(),
 });
 
 export const playerSkill = pgTable(
@@ -354,7 +359,7 @@ export const achievement = pgTable("achievement", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   icon: text("icon").notNull(),
-  criteria: jsonb("criteria").$type<{ type: string; threshold: number; category?: string }>().notNull(),
+  criteria: jsonb("criteria").$type<AchievementCriteria>().notNull(),
   xpReward: integer("xp_reward").notNull().default(0),
   titleReward: text("title_reward"),
 });

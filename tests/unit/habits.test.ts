@@ -96,3 +96,18 @@ describe("presentation helpers", () => {
     expect(cal[1][3].state).toBe("future");
   });
 });
+
+describe("weekdayInsights", () => {
+  it("rates each scheduled weekday and picks the strongest", async () => {
+    const { weekdayInsights } = await import("@/lib/progression/habits");
+    // MWF since Mon 12 Oct; all Mondays done, one Wednesday, no Fridays. Today Wed 28th (pending).
+    const done = ["2026-10-12", "2026-10-19", "2026-10-26", "2026-10-14"];
+    const cal = habitCalendar(MWF, done, "2026-10-12", "2026-10-28", 3);
+    const { days, strongest } = weekdayInsights(MWF, cal);
+    expect(days.find((d) => d.label === "Mon")).toMatchObject({ done: 3, due: 3 });
+    expect(days.find((d) => d.label === "Wed")).toMatchObject({ done: 1, due: 2 });
+    expect(days.find((d) => d.label === "Fri")).toMatchObject({ done: 0, due: 2 });
+    expect(days.find((d) => d.label === "Tue")).toMatchObject({ done: 0, due: 0 });
+    expect(strongest).toBe("Mon");
+  });
+});

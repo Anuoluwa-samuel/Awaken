@@ -23,6 +23,7 @@ export async function seedReferenceData(db: AppDb) {
         estimatedMinutes: t.estimatedMinutes ?? null,
         cadence: t.cadence,
         weeklyTarget: t.weeklyTarget ?? null,
+        requiredSkill: t.requiredSkill ?? null,
       })),
     )
     .onConflictDoUpdate({
@@ -35,6 +36,7 @@ export async function seedReferenceData(db: AppDb) {
         attribute: sql`excluded.attribute`,
         estimatedMinutes: sql`excluded.estimated_minutes`,
         weeklyTarget: sql`excluded.weekly_target`,
+        requiredSkill: sql`excluded.required_skill`,
       },
     });
 
@@ -49,6 +51,9 @@ export async function seedReferenceData(db: AppDb) {
         requiredLevel: sql`excluded.required_level`,
         prerequisiteCode: sql`excluded.prerequisite_code`,
         cost: sql`excluded.cost`,
+        category: sql`excluded.category`,
+        available: sql`excluded.available`,
+        effect: sql`excluded.effect`,
       },
     });
 
