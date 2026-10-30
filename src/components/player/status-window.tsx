@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
 import type { LevelProgress, RankProgress } from "@/lib/progression/levels";
+import { RankEmblem } from "./rank-emblem";
 
 export function StatusWindow({
   name,
@@ -11,6 +12,7 @@ export function StatusWindow({
   streak,
   questsDone,
   questsTotal,
+  skillPoints,
 }: {
   name: string;
   title: string | null;
@@ -19,6 +21,8 @@ export function StatusWindow({
   streak: number;
   questsDone: number;
   questsTotal: number;
+  /** Unspent skill points (spent in the skill tree, Phase 7). */
+  skillPoints: number;
 }) {
   const fmt = new Intl.NumberFormat();
   return (
@@ -37,7 +41,8 @@ export function StatusWindow({
           <div className="min-w-0">
             <h1 className="truncate font-display text-2xl font-bold tracking-wide">{name}</h1>
             {title ? <p className="text-sm text-arcane">{title}</p> : <p className="text-sm text-ink-faint">No title equipped</p>}
-            <div className="mt-2 flex gap-1.5">
+            <div className="mt-2 flex items-center gap-2">
+              <RankEmblem rank={rank.rank.id} className="size-8" />
               <Badge tone="arcane">{rank.rank.label}</Badge>
             </div>
           </div>
@@ -59,14 +64,34 @@ export function StatusWindow({
             </p>
           </div>
 
+          <div>
+            <div className="flex items-end justify-between gap-4 text-xs">
+              <p className="uppercase tracking-[0.18em] text-ink-muted">
+                {rank.next ? (
+                  <>
+                    Next rank · <span className="text-arcane">{rank.next.label}</span> at level {rank.next.minLevel}
+                  </>
+                ) : (
+                  "Highest rank reached"
+                )}
+              </p>
+              {rank.xpToNextRank != null ? (
+                <p className="font-mono text-ink-muted">{fmt.format(rank.xpToNextRank)} XP to go</p>
+              ) : null}
+            </div>
+            <ProgressBar
+              className="mt-1.5 h-1.5"
+              tone="arcane"
+              value={rank.ratio}
+              label={rank.next ? `Progress toward ${rank.next.label}` : "Rank progress"}
+            />
+          </div>
+
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Lifetime XP" value={fmt.format(level.totalXp)} />
             <Stat label="Today" value={`${questsDone}/${questsTotal}`} />
             <Stat label="Day streak" value={String(streak)} />
-            <Stat
-              label={rank.next ? `To ${rank.next.label}` : "Rank"}
-              value={rank.xpToNextRank != null ? `${fmt.format(rank.xpToNextRank)} XP` : "Max"}
-            />
+            <Stat label="Skill points" value={String(skillPoints)} />
           </dl>
         </div>
       </div>

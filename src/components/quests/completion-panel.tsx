@@ -2,7 +2,7 @@
 
 import { Sparkles, X } from "lucide-react";
 import { useEffect } from "react";
-import { ATTRIBUTE_INFO } from "@/lib/progression/config";
+import { ATTRIBUTE_INFO, type Attribute } from "@/lib/progression/config";
 import type { CompletionResult } from "@/server/services/quests";
 
 /** Non-blocking system message shown after completing a quest. */
@@ -18,6 +18,10 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
   }, [onClose, result.levelChange]);
 
   const done = result.status === "completed";
+  // The quest's own attribute and the daily Discipline bonus can be the same attribute.
+  const totals = new Map<Attribute, number>();
+  for (const a of result.attributes) if (a.granted > 0) totals.set(a.attribute, (totals.get(a.attribute) ?? 0) + a.granted);
+  const attributeGains = [...totals];
   return (
     <div
       role="status"
@@ -42,12 +46,9 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
             Experience acquired{" "}
             <span className="ml-1 font-mono text-base tracking-normal text-glow">+{result.xp.granted} XP</span>
           </p>
-          {result.attributes.filter((a) => a.granted > 0).length > 0 ? (
+          {attributeGains.length > 0 ? (
             <p className="mt-1 text-sm text-arcane">
-              {result.attributes
-                .filter((a) => a.granted > 0)
-                .map((a) => `+${a.granted} ${ATTRIBUTE_INFO[a.attribute].short}`)
-                .join(" · ")}
+              {attributeGains.map(([attribute, n]) => `+${n} ${ATTRIBUTE_INFO[attribute].short}`).join(" · ")}
             </p>
           ) : null}
           {result.xp.note ? <p className="mt-2 text-xs text-warning">{result.xp.note}</p> : null}

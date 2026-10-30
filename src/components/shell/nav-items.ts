@@ -9,6 +9,7 @@ import {
   ScrollText,
   Settings,
   Timer,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/system", label: "Status", icon: LayoutDashboard, mobile: true },
   { href: "/system/quests", label: "Quests", icon: ScrollText, mobile: true },
+  { href: "/system/profile", label: "Profile", icon: UserRound },
   { href: "/system/habits", label: "Habits", icon: Repeat, lockedUntil: 6 },
   { href: "/system/focus", label: "Focus", icon: Timer, lockedUntil: 8 },
   { href: "/system/goals", label: "Goals", icon: Flag, lockedUntil: 8 },

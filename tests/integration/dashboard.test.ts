@@ -41,3 +41,39 @@ describe("dashboard", () => {
     expect((await getStatusWindow(db, userId, clock("2026-10-29"))).streak).toBe(0);
   });
 });
+
+describe("activity and history", () => {
+  it("merges XP grants with level events, newest first, level event above its grant", async () => {
+    const { getRecentActivity, getProgressionHistory } = await import("@/server/services/dashboard");
+    const { grantXp } = await import("@/server/services/rewards");
+    const userId = await createUser(db);
+    const now = new Date("2026-10-27T11:00:00Z");
+    await createPlayer(db, userId, { displayName: "P", timeZone: "UTC", dayStartHour: 4, focusAreas: [], preferredDifficulty: "normal", dailyTarget: null }, now);
+    const grant = (key: string, amount: number, at: Date) =>
+      db.transaction((tx) =>
+        grantXp(tx, { userId, eventType: "achievement_unlocked", sourceType: "test", amount, reason: key, idempotencyKey: `${userId}:${key}`, now: at }),
+      );
+    await grant("small", 50, new Date("2026-10-27T11:00:00Z"));
+    await grant("big", 1600, new Date("2026-10-27T12:00:00Z")); // → level 10, D-Rank
+
+    const feed = await getRecentActivity(db, userId, 10);
+    expect(feed.map((i) => (i.kind === "level" ? `level ${i.toLevel}` : i.reason))).toEqual(["level 10", "big", "small"]);
+
+    // Same-instant grants: the follow-on (weekly) reward and its level-up sit above the quest.
+    const t = new Date("2026-10-27T13:00:00Z");
+    await db.transaction(async (tx) => {
+      await grantXp(tx, { userId, eventType: "quest_completed", sourceType: "player_quest", amount: 10, reason: "quest", idempotencyKey: `${userId}:q`, now: t });
+      await grantXp(tx, { userId, eventType: "weekly_completed", sourceType: "weekly_challenge", amount: 400, reason: "weekly", idempotencyKey: `${userId}:w`, now: t });
+    });
+    const tied = await getRecentActivity(db, userId, 3);
+    expect(tied.map((i) => (i.kind === "level" ? `level ${i.toLevel}` : i.reason))).toEqual(["level 11", "weekly", "quest"]);
+
+    const history = await getProgressionHistory(db, userId);
+    expect(history.rankUps).toHaveLength(1);
+    expect(history.rankUps[0]).toMatchObject({ fromRank: "E", toRank: "D" });
+    expect(history.ledgerXp).toBe(2060);
+
+    const summary = await getShellSummary(db, userId, "2026-10-27");
+    expect(summary.skillPoints).toBe(10);
+  });
+});

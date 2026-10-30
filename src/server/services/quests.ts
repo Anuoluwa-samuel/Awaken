@@ -19,7 +19,7 @@ import {
 } from "@/lib/progression/config";
 import { levelProgress, rankProgress, type LevelProgress, type RankProgress } from "@/lib/progression/levels";
 import { canTransition, OPEN_STATUSES } from "@/lib/progression/quest-state";
-import { resolveQuestXp, type ProgressionChange } from "@/lib/progression/rewards";
+import { applyXp, resolveQuestXp, type ProgressionChange } from "@/lib/progression/rewards";
 import { dayOfWeek, questDay, questDayBounds, type QuestDate } from "@/lib/time";
 import type { CustomQuestInput } from "@/lib/validation/quest";
 import { grantAttribute, grantXp, lockProgress } from "./rewards";
@@ -280,7 +280,7 @@ export async function completeQuest(
 
     // 4. Custom-quest safeguard: rewarded completions per category per day. Counted under
     //    the player lock so parallel completions of different quests can't all slip under it.
-    await lockProgress(tx, userId);
+    const before = await lockProgress(tx, userId);
     let requested = quest.xpReward;
     let customNote: string | null = null;
     if (quest.kind === "custom") {
@@ -358,6 +358,11 @@ export async function completeQuest(
     // 8. Weekly challenges.
     const weekly = await advanceWeeklyChallenges(tx, userId, quest.category, now);
 
+    // Level change across everything this completion granted (quest + weekly rewards).
+    const after = await tx.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) });
+    const gained = (after?.totalXp ?? before.totalXp) - before.totalXp;
+    const change = applyXp(before.totalXp, gained);
+
     return {
       status: "completed",
       questId,
@@ -367,7 +372,7 @@ export async function completeQuest(
           ? { requested: quest.xpReward, granted: xp.granted, note: customNote ?? xp.capReason }
           : { requested: quest.xpReward, granted: 0, note: "Already rewarded." },
       attributes,
-      levelChange: xp.status === "granted" && xp.change.levelsGained > 0 ? xp.change : null,
+      levelChange: change.levelsGained > 0 ? change : null,
       weekly,
       player: await playerSnapshot(tx, userId),
     };

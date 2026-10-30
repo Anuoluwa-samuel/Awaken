@@ -27,8 +27,8 @@ export function ProfileMenu({ name, initials }: { name: string; initials: string
           </DropdownMenu.Label>
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           <DropdownMenu.Item asChild className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-panel-raised">
-            <Link href="/system">
-              <User aria-hidden className="size-4" /> Status window
+            <Link href="/system/profile">
+              <User aria-hidden className="size-4" /> Profile
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Item asChild className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-panel-raised">

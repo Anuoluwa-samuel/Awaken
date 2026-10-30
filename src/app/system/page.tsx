@@ -1,6 +1,7 @@
-import { Award, History, ScrollText } from "lucide-react";
+import { Award, ScrollText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ActivityFeed } from "@/components/player/activity-feed";
 import { AttributeList } from "@/components/player/attribute-list";
 import { StatusWindow } from "@/components/player/status-window";
 import { QuestRow } from "@/components/quests/quest-row";
@@ -10,16 +11,17 @@ import { FormMessage } from "@/components/ui/field";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
 import { getPlayerContext } from "@/server/player-context";
-import { getShellSummary, getStatusWindow } from "@/server/services/dashboard";
+import { getRecentActivity, getShellSummary, getStatusWindow } from "@/server/services/dashboard";
 
 export const metadata: Metadata = { title: "Status" };
 
 export default async function StatusPage({ searchParams }: PageProps<"/system">) {
   const { welcome } = await searchParams;
   const { user, profile, today } = await getPlayerContext();
-  const [summary, status] = await Promise.all([
+  const [summary, status, activity] = await Promise.all([
     getShellSummary(db, user.id, today),
     getStatusWindow(db, user.id, { today, timeZone: profile.timeZone, dayStartHour: profile.dayStartHour }),
+    getRecentActivity(db, user.id, 8),
   ]);
   const openQuests = status.todayQuests.filter((q) => q.status === "available" || q.status === "in_progress");
 
@@ -40,6 +42,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
         streak={status.streak}
         questsDone={summary.questsDone}
         questsTotal={summary.questsTotal}
+        skillPoints={summary.skillPoints}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -75,19 +78,16 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
 
       <div className="grid gap-6 md:grid-cols-2">
         <Panel>
-          <PanelHeader eyebrow="Log" title="Recent activity" />
-          {status.recentXp.length === 0 ? (
-            <EmptyState icon={History}>Complete a quest to record your first experience.</EmptyState>
-          ) : (
-            <ul className="divide-y divide-line">
-              {status.recentXp.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <span className="min-w-0 truncate">{e.reason}</span>
-                  <span className="font-mono text-glow">+{e.amount} XP</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <PanelHeader
+            eyebrow="Log"
+            title="Recent activity"
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/system/profile">History</Link>
+              </Button>
+            }
+          />
+          <ActivityFeed items={activity} />
         </Panel>
         <Panel>
           <PanelHeader eyebrow="Records" title="Recent achievements" />

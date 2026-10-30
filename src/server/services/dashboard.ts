@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   achievement,
+  levelEvent,
   notification,
   playerAchievement,
   questCompletion,
@@ -10,7 +11,7 @@ import {
   xpLedger,
 } from "@/db/schema";
 import type { AppDb } from "@/db/types";
-import { ATTRIBUTES } from "@/lib/progression/config";
+import { ATTRIBUTES, type RankId } from "@/lib/progression/config";
 import { levelProgress, rankProgress } from "@/lib/progression/levels";
 import { activeDayStreak } from "@/lib/progression/streaks";
 import { addDays, type QuestDate } from "@/lib/time";
@@ -51,6 +52,7 @@ export async function getShellSummary(db: AppDb, userId: string, today: QuestDat
     questsOpen: open + (openOneOff[0]?.n ?? 0),
     questsDone: byStatus.completed ?? 0,
     questsTotal: open + (byStatus.completed ?? 0),
+    skillPoints: Math.max(0, (progress?.skillPointsEarned ?? 0) - (progress?.skillPointsSpent ?? 0)),
     unreadNotifications: unread[0]?.n ?? 0,
   };
 }
@@ -64,7 +66,7 @@ export async function getStatusWindow(
   const since = addDays(today, -400);
   // A completion's quest day, computed in the player's zone from when it actually happened.
   const completionDay = sql<string>`((${questCompletion.completedAt} at time zone ${clock.timeZone}) - make_interval(hours => ${clock.dayStartHour}))::date::text`;
-  const [attributes, todayQuests, activeDates, recentXp, recentAchievements] = await Promise.all([
+  const [attributes, todayQuests, activeDates, recentAchievements] = await Promise.all([
     db.query.playerAttribute.findMany({ where: eq(playerAttribute.userId, userId) }),
     db.query.playerQuest.findMany({
       where: and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today), isNotNull(playerQuest.templateId)),
@@ -74,11 +76,6 @@ export async function getStatusWindow(
       .selectDistinct({ date: completionDay })
       .from(questCompletion)
       .where(and(eq(questCompletion.userId, userId), gte(completionDay, since))),
-    db.query.xpLedger.findMany({
-      where: eq(xpLedger.userId, userId),
-      orderBy: [desc(xpLedger.createdAt)],
-      limit: 6,
-    }),
     db
       .select({
         code: achievement.code,
@@ -98,7 +95,100 @@ export async function getStatusWindow(
     attributes: ATTRIBUTES.map((a) => ({ attribute: a, points: points[a] ?? 0 })),
     todayQuests,
     streak: activeDayStreak(activeDates.map((d) => d.date), today),
-    recentXp,
     recentAchievements,
+  };
+}
+
+export type ActivityItem =
+  | {
+      kind: "xp";
+      id: string;
+      at: Date;
+      eventType: (typeof xpLedger.$inferSelect)["eventType"];
+      reason: string;
+      amount: number;
+    }
+  | { kind: "level"; id: string; at: Date; fromLevel: number; toLevel: number; fromRank: RankId; toRank: RankId };
+
+/** XP grants and level/rank events, newest first, from the persisted ledgers only. */
+export async function getRecentActivity(db: AppDb, userId: string, limit = 8): Promise<ActivityItem[]> {
+  const [xp, levels] = await Promise.all([
+    db.query.xpLedger.findMany({
+      where: eq(xpLedger.userId, userId),
+      orderBy: [desc(xpLedger.createdAt)],
+      limit,
+    }),
+    db.query.levelEvent.findMany({
+      where: eq(levelEvent.userId, userId),
+      orderBy: [desc(levelEvent.createdAt)],
+      limit,
+    }),
+  ]);
+  // Rewards granted in one transaction share a timestamp; within a tie, follow-on rewards
+  // (weekly, achievements…) happened after the quest that triggered them.
+  const xpItems = xp
+    .map((e) => ({
+      kind: "xp" as const,
+      id: e.id,
+      at: e.createdAt,
+      eventType: e.eventType,
+      reason: e.reason,
+      amount: e.amount,
+    }))
+    .sort(
+      (a, b) =>
+        b.at.getTime() - a.at.getTime() ||
+        Number(a.eventType === "quest_completed") - Number(b.eventType === "quest_completed"),
+    );
+  const levelItem = (l: (typeof levels)[number]): ActivityItem => ({
+    kind: "level",
+    id: l.id,
+    at: l.createdAt,
+    fromLevel: l.fromLevel,
+    toLevel: l.toLevel,
+    fromRank: l.fromRank,
+    toRank: l.toRank,
+  });
+
+  // Each level event sits directly above the grant that caused it.
+  const byLedger = new Map(levels.map((l) => [l.ledgerId, l]));
+  const placed = new Set<string>();
+  const items: ActivityItem[] = [];
+  for (const item of xpItems) {
+    const level = byLedger.get(item.id);
+    if (level) {
+      items.push(levelItem(level));
+      placed.add(level.id);
+    }
+    items.push(item);
+  }
+  // Level events whose grant fell outside the window: merge by time.
+  for (const l of levels) {
+    if (placed.has(l.id)) continue;
+    const i = items.findIndex((it) => it.at.getTime() < l.createdAt.getTime());
+    items.splice(i === -1 ? items.length : i, 0, levelItem(l));
+  }
+  return items.slice(0, limit);
+}
+
+/** Full level / rank history plus lifetime counters for the profile page. */
+export async function getProgressionHistory(db: AppDb, userId: string, limit = 100) {
+  const [levels, [{ completions }], [{ earned }]] = await Promise.all([
+    db.query.levelEvent.findMany({
+      where: eq(levelEvent.userId, userId),
+      orderBy: [desc(levelEvent.createdAt)],
+      limit,
+    }),
+    db.select({ completions: count() }).from(questCompletion).where(eq(questCompletion.userId, userId)),
+    db
+      .select({ earned: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int` })
+      .from(xpLedger)
+      .where(eq(xpLedger.userId, userId)),
+  ]);
+  return {
+    levels,
+    rankUps: levels.filter((l) => l.fromRank !== l.toRank),
+    questsCompleted: completions,
+    ledgerXp: earned,
   };
 }

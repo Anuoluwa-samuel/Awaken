@@ -269,6 +269,22 @@ and the reward is granted when the target is first reached (`reward_claimed_at` 
 Individual quest completions are shown as an inline system message instead, so the feed isn't
 flooded by routine activity.
 
+## 6b. Status window & level-up experience (Phase 5)
+
+- **Level change per completion** is measured across *everything* the completion granted
+  (quest XP plus any weekly reward), from the locked progress row before and after, so a
+  level-up triggered by a weekly reward is still celebrated.
+- **Level-up panel** (`src/components/player/level-up-panel.tsx`): non-modal — the backdrop
+  ignores pointer events, focus is not moved, and the rest of the page keeps working. Closes on
+  Escape, *Continue*, or after 6 s. Shows the old and new level, levels gained, skill points, and
+  the rank promotion with insignia. Reduced motion shows it without animation.
+- **Rank insignia** (`rank-emblem.tsx`) are original double-hex plates with per-rank colours.
+- **Activity feed** merges `xp_ledger` and `level_event` rows (persisted data only). Each level
+  event is placed directly above the grant that caused it; grants that share a timestamp list
+  follow-on rewards (weekly, achievements) above the quest that triggered them.
+- **Profile** (`/system/profile`): rank ladder with thresholds and progress to the next rank,
+  rank-up history, level history, lifetime counters.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
@@ -342,7 +358,7 @@ creates and drops a throwaway database and skips if no server is reachable.
       visual system + app shell, progression/time pure modules with unit tests
 - [x] Phase 3 — Reward service, ledger, level events, notifications, consistency check + repair, integration and concurrency tests
 - [x] Phase 4 — Completion flow, custom quest builder + safeguards, weekly challenges, quest detail & reward history, idempotency/concurrency tests
-- [ ] Phase 5 — Status window details, level-up panel, recent activity
+- [x] Phase 5 — Status window (rank insignia, rank progress, skill points), level-up panel, activity feed, profile with rank ladder and history
 - [ ] Phase 6 — Habits & streaks
 - [ ] Phase 7 — Achievements, titles, skill tree, rank history
 - [ ] Phase 8 — Focus timer, goals & milestones

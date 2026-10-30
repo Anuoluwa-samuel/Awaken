@@ -29,6 +29,16 @@ describe("CompletionPanel", () => {
     expect(screen.queryByText(/Level up/)).not.toBeInTheDocument();
   });
 
+  it("merges gains to the same attribute", () => {
+    render(
+      <CompletionPanel
+        result={{ ...base, attributes: [{ attribute: "discipline", granted: 1 }, { attribute: "discipline", granted: 1 }] }}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("+2 DIS")).toBeInTheDocument();
+  });
+
   it("shows level-ups, cap notes and weekly completions", () => {
     render(
       <CompletionPanel

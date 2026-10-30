@@ -65,5 +65,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-Phases 1–4 (design, foundation, progression engine, quest engine) are done. See the checklist at the
+Phases 1–5 (design, foundation, progression engine, quest engine, status window) are done. See the checklist at the
 end of the architecture doc for what comes next.
