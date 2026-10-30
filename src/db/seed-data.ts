@@ -61,7 +61,7 @@ export type SkillSeed = {
 export const SKILLS: SkillSeed[] = [
   { code: "early-bird", name: "Early Bird", description: "Adds a morning-routine daily quest.", category: "routine", requiredLevel: 3, prerequisiteCode: null, cost: 1, available: true, effect: { type: "daily_template", templateKey: "daily.morning-routine" } },
   { code: "consistency", name: "Consistency", description: "Adds weekday insights to every habit.", category: "habits", requiredLevel: 5, prerequisiteCode: "early-bird", cost: 1, available: true, effect: { type: "habit_insights" } },
-  { code: "deep-focus", name: "Deep Focus", description: "Unlocks 50- and 90-minute focus sessions.", category: "focus", requiredLevel: 5, prerequisiteCode: null, cost: 1, available: false, effect: { type: "focus_lengths", minutes: [50, 90] } },
+  { code: "deep-focus", name: "Deep Focus", description: "Unlocks 50- and 90-minute focus sessions.", category: "focus", requiredLevel: 5, prerequisiteCode: null, cost: 1, available: true, effect: { type: "focus_lengths", minutes: [50, 90] } },
   { code: "quick-learner", name: "Quick Learner", description: "Adds an advanced weekly study challenge.", category: "learning", requiredLevel: 8, prerequisiteCode: "early-bird", cost: 2, available: true, effect: { type: "weekly_template", templateKey: "weekly.advanced-study" } },
   { code: "creator", name: "Creator", description: "Adds a daily project-building quest.", category: "creativity", requiredLevel: 10, prerequisiteCode: "consistency", cost: 2, available: true, effect: { type: "daily_template", templateKey: "daily.build-45" } },
 ];
@@ -83,6 +83,8 @@ export const ACHIEVEMENTS: AchievementSeed[] = [
   { code: "unstoppable", name: "Unstoppable", description: "Keep a habit streak for 14 scheduled days.", icon: "flame", criteria: { type: "habit_streak", threshold: 14 }, xpReward: 50, titleReward: "Unstoppable" },
   { code: "consistent", name: "Consistent", description: "Complete a weekly challenge.", icon: "calendar-check", criteria: { type: "weekly_completed", threshold: 1 }, xpReward: 25, titleReward: null },
   { code: "skilled", name: "Skilled", description: "Unlock your first skill.", icon: "git-branch", criteria: { type: "skills_unlocked", threshold: 1 }, xpReward: 10, titleReward: null },
+  { code: "flow-state", name: "Flow State", description: "Complete 10 full focus sessions.", icon: "timer", criteria: { type: "focus_sessions", threshold: 10 }, xpReward: 25, titleReward: null },
+  { code: "finisher", name: "Finisher", description: "Complete a goal.", icon: "flag", criteria: { type: "goals_completed", threshold: 1 }, xpReward: 25, titleReward: "Finisher" },
   { code: "rising", name: "Rising Hunter", description: "Reach D-Rank (level 10).", icon: "chevrons-up", criteria: { type: "level", threshold: 10 }, xpReward: 0, titleReward: "Rising Hunter" },
   { code: "scholar", name: "Scholar", description: "Complete 25 learning quests.", icon: "book-open", criteria: { type: "category_quests", threshold: 25, category: "learning" }, xpReward: 50, titleReward: "Scholar" },
   { code: "creator", name: "Creator", description: "Complete 25 creativity quests.", icon: "palette", criteria: { type: "category_quests", threshold: 25, category: "creativity" }, xpReward: 50, titleReward: "Creator" },

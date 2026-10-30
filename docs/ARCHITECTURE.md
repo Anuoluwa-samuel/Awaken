@@ -348,7 +348,7 @@ backstop against double unlocks. Effects add content and never change XP values:
 |---|---|---|---|---|
 | Early Bird | 3 | 1 | — | schedules the *morning routine* daily quest |
 | Consistency | 5 | 1 | Early Bird | weekday insights on each habit |
-| Deep Focus | 5 | 1 | — | 50/90-min focus sessions — **not unlockable until Focus ships (Phase 8)** |
+| Deep Focus | 5 | 1 | — | 50- and 90-minute focus sessions |
 | Quick Learner | 8 | 2 | Early Bird | *Advanced study block* weekly challenge (6 learning quests) |
 | Creator | 10 | 2 | Consistency | *Build something for 45 minutes* daily quest |
 
@@ -356,6 +356,44 @@ Skill-gated templates carry `quest_template.required_skill`; daily generation an
 assignment skip them unless the player has the skill, even if a schedule row exists.
 
 **Rank-up history** is shown on `/system/profile` (Phase 5), sourced from `level_event`.
+
+## 6e. Focus sessions & goals (Phase 8)
+
+**Focus** (`src/server/services/focus.ts`, pure timing in `src/lib/progression/focus.ts`).
+The server stores `started_at`, `paused_at` and `total_paused_seconds` and computes focused
+time itself: `elapsed = (now − started) − paused`. **Paused time never counts.** The client shows a
+countdown derived from those timestamps plus the measured server/device clock offset, re-rendered
+on an interval (no decrementing counter), so a refresh, a closed tab or a throttled background tab
+recovers exactly. When the countdown reaches zero the client asks the server to complete; the server
+re-checks that the session is full (2 s tolerance) and rejects anything early.
+
+| Rule | Value |
+|---|---|
+| Lengths | 10–45 min; up to 90 min with the Deep Focus skill (presets 15/25/45, +50/90) |
+| Active sessions | one per player (partial unique index on running/paused) — a second start returns the active one |
+| Full session reward | round(minutes × 0.4) XP (25 min → 10) + 1 Discipline; key `focus:{id}`; counts toward the daily cap |
+| Ended early | status `abandoned`, credited focused seconds recorded, **no XP** |
+| Linked quest | completed by the session when still open and its estimate ≤ session length → quest rewards only (`method = focus_session`); otherwise the focus reward applies and the player is told why |
+| Breaks | 5 min, or 15 min after every 4th full session today; client-only (localStorage, server-time based), skippable, earn nothing |
+
+Focus can't verify attention — like every completion it is self-reported time.
+
+**Goals** (`src/server/services/goals.ts`, completion in `goal-links.ts`). Progress =
+completed milestones ÷ milestones; nothing else moves it. Milestones are checked off by the player
+or completed through a linked quest: "Make quest" creates a one-off custom quest for a milestone
+(one quest per milestone, partial unique index). Completing either side completes both, and the
+quest's reward is the only reward for that step. When the last milestone completes, the goal
+completes and may earn:
+
+- `10 XP × milestones` (max 100), key `goal:{id}`, **only if** it has ≥ 2 milestones, was created on
+  an earlier quest day, and fewer than 2 goals were rewarded today. Otherwise it is recorded with
+  the reason shown. The goals page shows the prospective reward up front.
+- A notification, and achievement evaluation (*Finisher*).
+
+**Lock order everywhere:** focus row / habit row → quest row → player row → goal row → weekly rows.
+`completeGoalIfDone` locks the goal before re-reading milestones, so when the last milestones finish
+in parallel exactly one transaction completes the goal (verified with real-Postgres races mixing
+milestone, quest and focus completions).
 
 ## 7. Reward ledger & duplicate prevention
 
@@ -393,7 +431,8 @@ Idempotency keys (one per reward-earning fact):
 | Weekly challenge | `weekly:{challengeId}` |
 | Achievement | `achievement:{userId}:{code}` (uncapped) |
 | Habit check-in | `habit:{habitId}:{questDay}` (+ `:attr`) |
-| Focus session | `focus:{sessionId}` |
+| Focus session | `focus:{sessionId}` (+ `:attr`) |
+| Goal completion | `goal:{goalId}` |
 
 Quest completion additionally locks the `player_quest` row and inserts a
 `quest_completion` row (unique per quest), giving three independent guards (§6a). The client never sends an XP amount, level, or rank.
@@ -434,7 +473,7 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 5 — Status window (rank insignia, rank progress, skill points), level-up panel, activity feed, profile with rank ladder and history
 - [x] Phase 6 — Habits (day / weekly schedules, rest days), streaks, rates, heatmap, quest links with single-reward rule, mobile menu
 - [x] Phase 7 — Achievement engine + catch-up, titles, skill tree with real effects, unlock messages, races tested
-- [ ] Phase 8 — Focus timer, goals & milestones
+- [x] Phase 8 — Server-timed focus sessions with recovery, pauses, breaks, quest links; goals with milestones, quest links, guarded rewards
 - [ ] Phase 9 — Analytics, notifications
 - [ ] Phase 10 — QA, Playwright E2E, accessibility pass
 - [ ] Phase 11 — Deployment docs

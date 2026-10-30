@@ -9,7 +9,9 @@ export type AchievementCriteria =
   | { type: "weekly_completed"; threshold: number }
   | { type: "habit_streak"; threshold: number }
   | { type: "habit_checkins"; threshold: number }
-  | { type: "skills_unlocked"; threshold: number };
+  | { type: "skills_unlocked"; threshold: number }
+  | { type: "goals_completed"; threshold: number }
+  | { type: "focus_sessions"; threshold: number };
 
 /** Everything criteria can look at, computed from persisted records. */
 export type PlayerMetrics = {
@@ -21,6 +23,9 @@ export type PlayerMetrics = {
   bestHabitStreak: number;
   habitCheckIns: number;
   skillsUnlocked: number;
+  goalsCompleted: number;
+  /** Completed (full-length) focus sessions. */
+  focusSessions: number;
 };
 
 export function metricFor(c: AchievementCriteria, m: PlayerMetrics): number {
@@ -39,6 +44,10 @@ export function metricFor(c: AchievementCriteria, m: PlayerMetrics): number {
       return m.habitCheckIns;
     case "skills_unlocked":
       return m.skillsUnlocked;
+    case "goals_completed":
+      return m.goalsCompleted;
+    case "focus_sessions":
+      return m.focusSessions;
   }
 }
 

@@ -4,12 +4,14 @@ import {
   CalendarCheck,
   ChevronsUp,
   Crown,
+  Flag,
   Flame,
   GitBranch,
   Palette,
   Repeat,
   Sparkles,
   Swords,
+  Timer,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +26,8 @@ const ICONS: Record<string, LucideIcon> = {
   "book-open": BookOpen,
   palette: Palette,
   crown: Crown,
+  timer: Timer,
+  flag: Flag,
 };
 
 export function AchievementIcon({ name, className }: { name: string; className?: string }) {

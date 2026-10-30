@@ -65,5 +65,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-Phases 1–7 (design, foundation, progression, quests, status window, habits, achievements & skills) are done. See the checklist at the
+Phases 1–8 (design, foundation, progression, quests, status window, habits, achievements & skills, focus & goals) are done. See the checklist at the
 end of the architecture doc for what comes next.

@@ -1,6 +1,8 @@
 import { and, asc, count, eq, gte, isNull } from "drizzle-orm";
 import {
   achievement,
+  focusSession,
+  goal,
   habit,
   habitCompletion,
   playerAchievement,
@@ -52,7 +54,7 @@ async function playerToday(db: AppDb, userId: string, now: Date): Promise<QuestD
 }
 
 export async function computeMetrics(db: AppDb, userId: string, today: QuestDate): Promise<PlayerMetrics> {
-  const [progress, [{ quests }], byCategory, [{ weekly }], [{ checkIns }], [{ skills }], habits] = await Promise.all([
+  const [progress, [{ quests }], byCategory, [{ weekly }], [{ checkIns }], [{ skills }], habits, [{ goals }], [{ focus }]] = await Promise.all([
     db.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId), columns: { level: true } }),
     db.select({ quests: count() }).from(questCompletion).where(eq(questCompletion.userId, userId)),
     db
@@ -71,6 +73,11 @@ export async function computeMetrics(db: AppDb, userId: string, today: QuestDate
       where: and(eq(habit.userId, userId), isNull(habit.archivedAt)),
       columns: { id: true, scheduleDays: true, timesPerWeek: true, startDate: true },
     }),
+    db.select({ goals: count() }).from(goal).where(and(eq(goal.userId, userId), eq(goal.status, "completed"))),
+    db
+      .select({ focus: count() })
+      .from(focusSession)
+      .where(and(eq(focusSession.userId, userId), eq(focusSession.status, "completed"))),
   ]);
 
   // Best current day-streak across day-scheduled habits (weekly habits count weeks, not days).
@@ -95,6 +102,8 @@ export async function computeMetrics(db: AppDb, userId: string, today: QuestDate
     bestHabitStreak,
     habitCheckIns: checkIns,
     skillsUnlocked: skills,
+    goalsCompleted: goals,
+    focusSessions: focus,
   };
 }
 

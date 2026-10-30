@@ -216,4 +216,64 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     expect(notes.filter((n) => n.type === "achievement")).toHaveLength(1);
     expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
   });
+
+  it("allows one active focus session and pays a completed session once", async () => {
+    const { startFocus, completeFocus } = await import("@/server/services/focus");
+    const { focusSession } = await import("@/db/schema");
+    const userId = await newPlayer();
+    const starts = await Promise.all(Array.from({ length: 10 }, () => startFocus(db, userId, { minutes: 25 }, NOON)));
+    expect(new Set(starts.map((s) => s.session.id)).size).toBe(1);
+    const id = starts[0].session.id;
+    const end = new Date(NOON.getTime() + 25 * 60_000);
+    const results = await Promise.all(Array.from({ length: 15 }, () => completeFocus(db, userId, id, end)));
+    expect(results.filter((r) => r.status === "completed")).toHaveLength(1);
+    expect(await db.query.focusSession.findMany({ where: eq(focusSession.userId, userId) })).toHaveLength(1);
+    const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+    expect(ledger.filter((l) => l.eventType === "focus_completed")).toHaveLength(1);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+  });
+
+  it("completes a goal exactly once when its last milestones finish in parallel", async () => {
+    const { createGoal, listGoals, completeMilestone } = await import("@/server/services/goals");
+    for (let round = 0; round < 5; round++) {
+      const userId = await newPlayer();
+      await createGoal(db, userId, { title: "G", description: "", category: "career", deadline: null, milestones: ["A", "B", "C"] }, NOON);
+      const [item] = await listGoals(db, userId, "2026-10-27");
+      const day2 = new Date("2026-10-28T11:00:00Z");
+      const results = await Promise.all(item.milestones.map((m) => completeMilestone(db, userId, m.id, day2)));
+      expect(results.filter((r) => r.goalCompleted)).toHaveLength(1);
+      const [after] = await listGoals(db, userId, "2026-10-28");
+      expect(after.goal.status).toBe("completed");
+      const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+      expect(ledger.filter((l) => l.eventType === "goal_completed")).toHaveLength(1);
+      expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+    }
+  });
+
+  it("does not deadlock when milestone, quest and focus completions on one goal race", async () => {
+    const { createGoal, listGoals, completeMilestone, createQuestForMilestone } = await import("@/server/services/goals");
+    const { startFocus, completeFocus } = await import("@/server/services/focus");
+    for (let round = 0; round < 5; round++) {
+      const userId = await newPlayer();
+      await createGoal(db, userId, { title: "G", description: "", category: "career", deadline: null, milestones: ["Linked", "Plain", "Focus"] }, NOON);
+      const [item] = await listGoals(db, userId, "2026-10-27");
+      const q1 = await createQuestForMilestone(db, userId, item.milestones[0].id, NOON);
+      const q3 = await createQuestForMilestone(db, userId, item.milestones[2].id, NOON);
+      const { session } = await startFocus(db, userId, { minutes: 10, questId: q3.questId }, NOON);
+      const end = new Date(NOON.getTime() + 10 * 60_000);
+      await Promise.all([
+        completeMilestone(db, userId, item.milestones[0].id, end),
+        completeQuest(db, userId, q1.questId, { now: end }),
+        completeMilestone(db, userId, item.milestones[1].id, end),
+        completeFocus(db, userId, session.id, end),
+        completeMilestone(db, userId, item.milestones[2].id, end),
+      ]);
+      const [after] = await listGoals(db, userId, "2026-10-27");
+      expect(after.progress.complete).toBe(true);
+      expect(after.goal.status).toBe("completed");
+      const ledger = await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) });
+      expect(ledger.filter((l) => l.eventType === "quest_completed")).toHaveLength(2);
+      expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
+    }
+  });
 });

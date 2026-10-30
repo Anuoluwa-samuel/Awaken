@@ -23,6 +23,7 @@ import { applyXp, resolveQuestXp, type ProgressionChange } from "@/lib/progressi
 import { dayOfWeek, questDay, questDayBounds, type QuestDate } from "@/lib/time";
 import type { CustomQuestInput } from "@/lib/validation/quest";
 import { evaluateAchievements, type UnlockedAchievement } from "./achievements";
+import { recordMilestonesForQuest, type GoalCompletion } from "./goal-links";
 import { recordLinkedHabitCheckIns } from "./habit-links";
 import { grantAttribute, grantXp, lockProgress } from "./rewards";
 import { advanceWeeklyChallenges, type WeeklyAdvance } from "./weekly";
@@ -233,6 +234,8 @@ export type CompletionResult = {
   levelChange: ProgressionChange | null;
   weekly: WeeklyAdvance[];
   achievements: UnlockedAchievement[];
+  /** Set when this completion finished a goal through its linked milestone. */
+  goal?: GoalCompletion | null;
   player: { level: LevelProgress; rank: RankProgress };
 };
 
@@ -366,8 +369,11 @@ export async function completeQuest(
     // 8. Weekly challenges.
     const weekly = await advanceWeeklyChallenges(tx, userId, quest.category, now);
 
-    // 9. Achievements (their XP can level the player up, so measure the level change after).
-    const achievements = await evaluateAchievements(tx, userId, now);
+    // 9. Goal milestones linked to this quest (may complete a goal and grant its reward).
+    const goalCompleted = await recordMilestonesForQuest(tx, userId, quest.id, now);
+
+    // 10. Achievements (their XP can level the player up, so measure the level change after).
+    const achievements = [...(goalCompleted?.achievements ?? []), ...(await evaluateAchievements(tx, userId, now))];
 
     // Level change across everything this completion granted (quest + weekly + achievements).
     const after = await tx.query.playerProgress.findFirst({ where: eq(playerProgress.userId, userId) });
@@ -386,6 +392,7 @@ export async function completeQuest(
       levelChange: change.levelsGained > 0 ? change : null,
       weekly,
       achievements,
+      goal: goalCompleted,
       player: await playerSnapshot(tx, userId),
     };
   });

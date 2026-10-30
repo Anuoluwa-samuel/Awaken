@@ -403,12 +403,20 @@ export const focusSession = pgTable(
     totalPausedSeconds: integer("total_paused_seconds").notNull().default(0),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     status: focusStatusEnum("status").notNull().default("running"),
+    /** Focused time actually credited (excludes pauses, capped at planned). */
     creditedSeconds: integer("credited_seconds").notNull().default(0),
+    /** The player's quest day the session started on (for stats and caps). */
+    startDate: date("start_date", { mode: "string" }).notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     index("focus_session_user_idx").on(t.userId, t.startedAt),
+    // At most one running or paused session per player.
+    uniqueIndex("focus_session_one_active")
+      .on(t.userId)
+      .where(sql`${t.status} in ('running', 'paused')`),
     check("planned_seconds_range", sql`${t.plannedSeconds} between 60 and 14400`),
+    check("credited_within_planned", sql`${t.creditedSeconds} between 0 and ${t.plannedSeconds}`),
   ],
 );
 
@@ -422,6 +430,8 @@ export const goal = pgTable(
     category: categoryEnum("category").notNull(),
     deadline: date("deadline", { mode: "string" }),
     status: goalStatusEnum("status").notNull().default("active"),
+    /** The player's quest day the goal was created (rewards need it to be an earlier day). */
+    startDate: date("start_date", { mode: "string" }).notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -445,7 +455,13 @@ export const goalMilestone = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
-  (t) => [index("goal_milestone_goal_idx").on(t.goalId, t.position)],
+  (t) => [
+    index("goal_milestone_goal_idx").on(t.goalId, t.position),
+    // A quest can stand for at most one milestone.
+    uniqueIndex("goal_milestone_quest_unique")
+      .on(t.playerQuestId)
+      .where(sql`${t.playerQuestId} is not null`),
+  ],
 );
 
 // ─── Notifications & audit ───────────────────────────────────────────────────

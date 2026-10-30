@@ -116,3 +116,33 @@ export const HABIT_RULES = {
   /** Days of history loaded for streaks, rates and the heatmap. */
   historyDays: 400,
 } as const;
+
+export const FOCUS_RULES = {
+  /** Shortest session that can earn XP. */
+  minMinutes: 10,
+  /** Longest session without the Deep Focus skill. */
+  maxBaseMinutes: 45,
+  /** Longest session with Deep Focus. */
+  maxDeepMinutes: 90,
+  presets: [15, 25, 45],
+  deepPresets: [50, 90],
+  /** Clock slack allowed when a full session is reported complete. */
+  completionToleranceSeconds: 2,
+  /** XP for a full session = round(minutes × xpPerMinute): 25 min → 10 XP. Counts toward the daily cap. */
+  xpPerMinute: 10 / 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  longBreakEvery: 4,
+} as const;
+
+export const GOAL_RULES = {
+  minMilestones: 2,
+  maxMilestones: 12,
+  /** Goal reward = xpPerMilestone × milestones, up to maxXp. */
+  xpPerMilestone: 10,
+  maxXp: 100,
+  /** Rewarded goal completions per player quest day. */
+  maxRewardedPerDay: 2,
+  maxActiveGoals: 10,
+  maxTitleLength: 80,
+} as const;

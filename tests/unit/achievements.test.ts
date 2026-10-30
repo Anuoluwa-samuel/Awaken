@@ -15,6 +15,8 @@ const zero: PlayerMetrics = {
   bestHabitStreak: 0,
   habitCheckIns: 0,
   skillsUnlocked: 0,
+  goalsCompleted: 0,
+  focusSessions: 0,
 };
 
 describe("achievement criteria", () => {
@@ -49,7 +51,8 @@ describe("achievement criteria", () => {
 describe("skill prerequisites", () => {
   const bird = SKILLS.find((s) => s.code === "early-bird")!;
   const creator = SKILLS.find((s) => s.code === "creator")!;
-  const focus = SKILLS.find((s) => s.code === "deep-focus")!;
+  // A skill whose feature hasn't shipped yet.
+  const future = { code: "future", requiredLevel: 1, prerequisiteCode: null, cost: 1, available: false };
   const player = (over: Partial<{ level: number; pointsAvailable: number; unlocked: Set<string> }> = {}) => ({
     level: 20,
     pointsAvailable: 10,
@@ -73,7 +76,7 @@ describe("skill prerequisites", () => {
 
   it("never unlocks twice or unlocks unavailable features", () => {
     expect(skillBlocker(bird, player({ unlocked: new Set(["early-bird"]) }))).toEqual({ reason: "unlocked" });
-    expect(skillBlocker(focus, player())).toEqual({ reason: "unavailable" });
+    expect(skillBlocker(future, player())).toEqual({ reason: "unavailable" });
   });
 
   it("seed prerequisites reference real skills with lower or equal level requirements", () => {

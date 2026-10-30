@@ -125,7 +125,6 @@ describe("skill tree", () => {
     await expect(unlockSkill(db, userId, "early-bird", TUE)).rejects.toMatchObject({ code: "level" });
     await boostTo(userId, 5); // 4 skill points
     await expect(unlockSkill(db, userId, "consistency", TUE)).rejects.toMatchObject({ code: "prerequisite" });
-    await expect(unlockSkill(db, userId, "deep-focus", TUE)).rejects.toMatchObject({ code: "unavailable" });
     await expect(unlockSkill(db, userId, "nope", TUE)).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     const r = await unlockSkill(db, userId, "early-bird", TUE);
