@@ -11,7 +11,7 @@ export function ProfileMenu({ name, initials }: { name: string; initials: string
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        aria-label={`Player menu for ${name}`}
+        aria-label={`${initials} — player menu for ${name}`}
         className="grid size-9 place-items-center rounded-md border border-line-strong bg-panel-raised font-display text-sm font-bold text-glow hover:shadow-glow"
       >
         {initials}

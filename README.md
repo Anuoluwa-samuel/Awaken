@@ -44,6 +44,7 @@ shortened for reduced-motion users.
 | `pnpm typecheck` | Route type generation + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Unit + integration tests (PGlite), plus concurrency tests against the Docker Postgres when it is running |
+| `pnpm test:e2e` | Playwright end-to-end, accessibility (axe) and mobile checks. Needs the Docker Postgres; recreates an `awaken_e2e` database and runs its own server on port 3200 (`.next-e2e`), so it doesn't disturb `pnpm dev` |
 | `pnpm db:generate` | Create a migration from schema changes |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Database |
 | `pnpm db:check [--repair]` | Verify cached XP/level/rank/attributes against the ledgers |
@@ -65,5 +66,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-Phases 1–9 (design, foundation, progression, quests, status window, habits, achievements & skills, focus & goals, analytics & notifications) are done. See the checklist at the
-end of the architecture doc for what comes next.
+Phases 1–10 are done (everything except deployment). What isn't built or verified yet is listed in
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md); the architecture doc ends with the phase checklist.

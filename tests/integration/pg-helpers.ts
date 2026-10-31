@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import * as schema from "@/db/schema";
-import { seedReferenceData } from "@/db/seed";
+import { seedReferenceData } from "@/db/seed-reference";
 import type { AppDb } from "@/db/types";
 
 config({ path: ".env.local", quiet: true });

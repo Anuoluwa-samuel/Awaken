@@ -2,7 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import * as schema from "@/db/schema";
-import { seedReferenceData } from "@/db/seed";
+import { seedReferenceData } from "@/db/seed-reference";
 import type { AppDb } from "@/db/types";
 
 /** A fresh in-process Postgres with migrations and reference data applied. */

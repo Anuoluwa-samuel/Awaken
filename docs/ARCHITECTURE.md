@@ -517,5 +517,5 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 7 — Achievement engine + catch-up, titles, skill tree with real effects, unlock messages, races tested
 - [x] Phase 8 — Server-timed focus sessions with recovery, pauses, breaks, quest links; goals with milestones, quest links, guarded rewards
 - [x] Phase 9 — Progress analytics with range filters, charts + tables; notifications with read state, daily and deadline reminders, header panel
-- [ ] Phase 10 — QA, Playwright E2E, accessibility pass
+- [x] Phase 10 — Playwright E2E (journey, security, isolation, rate limits), axe accessibility on all pages, mobile overflow checks, fixes, docs/LIMITATIONS.md
 - [ ] Phase 11 — Deployment docs
