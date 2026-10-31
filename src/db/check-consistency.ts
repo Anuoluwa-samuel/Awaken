@@ -11,7 +11,7 @@ config({ path: ".env.local" });
 
 async function main() {
   const repair = process.argv.includes("--repair");
-  const client = postgres(process.env.DATABASE_URL!, { max: 1 });
+  const client = postgres(process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!, { max: 1 });
   const db = drizzle(client, { schema }) as unknown as AppDb;
   const players = await db.select({ userId: schema.playerProgress.userId }).from(schema.playerProgress);
   let bad = 0;

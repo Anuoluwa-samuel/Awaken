@@ -1,20 +1,37 @@
 import { z } from "zod";
 
-const schema = z.object({
-  DATABASE_URL: z.string().url(),
-  BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
-  BETTER_AUTH_URL: z.string().url(),
-  REQUIRE_EMAIL_VERIFICATION: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((v) => v === "true"),
-});
+const bool = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((v) => v === "true");
+
+const schema = z
+  .object({
+    DATABASE_URL: z.string().url(),
+    BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
+    BETTER_AUTH_URL: z.string().url(),
+    REQUIRE_EMAIL_VERIFICATION: bool,
+    /** Resend API key; when absent, development prints emails to the console. */
+    RESEND_API_KEY: z.string().startsWith("re_").optional(),
+    /** Verified sender, e.g. `AWAKEN <system@your-domain.com>`. */
+    EMAIL_FROM: z.string().min(3).optional(),
+    /** Connection pool size per server instance (Vercel functions: keep it small). */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).optional(),
+  })
+  .refine((e) => !e.RESEND_API_KEY || !!e.EMAIL_FROM, {
+    path: ["EMAIL_FROM"],
+    message: "EMAIL_FROM is required when RESEND_API_KEY is set",
+  })
+  .refine((e) => process.env.NODE_ENV !== "production" || !e.REQUIRE_EMAIL_VERIFICATION || !!e.RESEND_API_KEY, {
+    path: ["RESEND_API_KEY"],
+    message: "Email verification is required but no email provider is configured",
+  });
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  // Fail fast with the variable names only — never echo secret values.
+  // Fail fast with variable names and reasons only — never echo secret values.
   throw new Error(
-    `Invalid environment: ${parsed.error.issues.map((i) => i.path.join(".")).join(", ")}. See .env.example.`,
+    `Invalid environment: ${parsed.error.issues.map((i) => `${i.path.join(".")} (${i.message})`).join(", ")}. See .env.example.`,
   );
 }
 

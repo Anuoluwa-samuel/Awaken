@@ -11,7 +11,7 @@ export { seedReferenceData };
 config({ path: ".env.local" });
 
 async function main() {
-  const client = postgres(process.env.DATABASE_URL!, { max: 1 });
+  const client = postgres(process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!, { max: 1 });
   await seedReferenceData(drizzle(client, { schema }));
   await client.end();
   console.log(

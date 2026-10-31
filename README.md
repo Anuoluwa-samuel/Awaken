@@ -24,8 +24,8 @@ pnpm dev
 ```
 
 In development, verification and password-reset emails are printed to the
-dev-server console. Production has no email provider yet (see
-`src/lib/email.ts`) and sending will throw rather than silently fail.
+dev-server console. In production they go through Resend (`RESEND_API_KEY`,
+`EMAIL_FROM`); see `src/lib/email.ts`.
 
 Every full page load opens with the AWAKEN logo intro
 (`src/components/brand/intro-splash.tsx`). It stays at least 2.4 s and until the
@@ -48,6 +48,8 @@ shortened for reduced-motion users.
 | `pnpm db:generate` | Create a migration from schema changes |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Database |
 | `pnpm db:check [--repair]` | Verify cached XP/level/rank/attributes against the ledgers |
+| `pnpm db:deploy` | Migrate + seed a database (uses `MIGRATION_DATABASE_URL` when set) |
+| `pnpm deploy:check [--env-file F] [--connect]` | Validate production settings (prints PASS/WARN/FAIL, never values) |
 
 ## Project layout
 
@@ -66,5 +68,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-Phases 1–10 are done (everything except deployment). What isn't built or verified yet is listed in
-[docs/LIMITATIONS.md](docs/LIMITATIONS.md); the architecture doc ends with the phase checklist.
+All 11 phases are done. Deploy with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (Vercel + Neon + Resend);
+what isn't built or verified yet is in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).

@@ -1,0 +1,50 @@
+import { describe, expect, it } from "vitest";
+import { checkProductionEnv } from "@/lib/deploy-check";
+
+const good = {
+  DATABASE_URL: "postgresql://u:p@ep-cool-123-pooler.eu-central-1.aws.neon.tech/awaken?sslmode=require",
+  MIGRATION_DATABASE_URL: "postgresql://u:p@ep-cool-123.eu-central-1.aws.neon.tech/awaken?sslmode=require",
+  BETTER_AUTH_SECRET: "k".repeat(44),
+  BETTER_AUTH_URL: "https://awaken.example.com",
+  NEXT_PUBLIC_APP_URL: "https://awaken.example.com",
+  RESEND_API_KEY: "re_123",
+  EMAIL_FROM: "AWAKEN <system@example.com>",
+  REQUIRE_EMAIL_VERIFICATION: "true",
+};
+const levels = (env: Record<string, string | undefined>) => checkProductionEnv(env).map((f) => `${f.level}:${f.key}`);
+
+describe("checkProductionEnv", () => {
+  it("passes a complete Neon + Resend configuration", () => {
+    expect(checkProductionEnv(good).every((f) => f.level === "pass")).toBe(true);
+  });
+
+  it("fails on local database, http auth URL, placeholder secret and missing email", () => {
+    const out = levels({
+      ...good,
+      DATABASE_URL: "postgres://awaken:awaken@localhost:54350/awaken",
+      BETTER_AUTH_URL: "http://localhost:3000",
+      BETTER_AUTH_SECRET: "replace-me-with-32-random-bytes-xx",
+      RESEND_API_KEY: undefined,
+      EMAIL_FROM: undefined,
+    });
+    for (const k of ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "RESEND_API_KEY", "EMAIL_FROM"]) {
+      expect(out).toContain(`fail:${k}`);
+    }
+  });
+
+  it("warns about unpooled app URLs, pooled migration URLs and missing TLS", () => {
+    const out = levels({
+      ...good,
+      DATABASE_URL: "postgresql://u:p@ep-cool-123.eu-central-1.aws.neon.tech/awaken",
+      MIGRATION_DATABASE_URL: good.DATABASE_URL,
+      REQUIRE_EMAIL_VERIFICATION: "false",
+    });
+    expect(out).toEqual(expect.arrayContaining(["warn:DATABASE_URL", "warn:MIGRATION_DATABASE_URL", "warn:REQUIRE_EMAIL_VERIFICATION"]));
+  });
+
+  it("never includes secret values in messages", () => {
+    const text = JSON.stringify(checkProductionEnv({ ...good, BETTER_AUTH_SECRET: "short-secret-value" }));
+    expect(text).not.toContain("short-secret-value");
+    expect(text).not.toContain("u:p@");
+  });
+});

@@ -17,6 +17,7 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      rateLimit: schema.rateLimit,
     },
   }),
   emailAndPassword: {
@@ -51,6 +52,9 @@ export const auth = betterAuth({
   },
   rateLimit: {
     enabled: true,
+    // Counters live in Postgres so every server instance (and every short-lived Vercel
+    // function) shares them; in-memory counters would reset per instance.
+    storage: "database",
     window: 60,
     max: 100,
     customRules: {
@@ -63,6 +67,14 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
+    // Client IP for rate limiting — see docs/DEPLOYMENT.md. On Vercel the platform sets
+    // x-vercel-forwarded-for itself (clients can't spoof it). Elsewhere, AUTH_IP_HEADER names the
+    // header your proxy overwrites; locally Better Auth falls back to 127.0.0.1.
+    ipAddress: {
+      ipAddressHeaders: process.env.VERCEL
+        ? ["x-vercel-forwarded-for"]
+        : [process.env.AUTH_IP_HEADER || "x-forwarded-for"],
+    },
     database: { generateId: () => crypto.randomUUID() },
   },
   // Must be last: lets server actions set auth cookies.

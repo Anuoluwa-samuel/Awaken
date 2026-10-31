@@ -10,25 +10,21 @@ Items marked **Phase 11** must be resolved before a public deployment.
 - **Focus measures time, not attention.** The server validates that a session's planned time has
   elapsed (excluding pauses); it can't tell whether the player was focusing.
 
-## Deployment-blocking (Phase 11)
+## Deployment (resolved in Phase 11, needs your accounts)
 
-- **No production email provider.** Verification and password-reset emails are printed to the
-  dev-server console. In production `sendEmail` throws, so sign-up's verification email and password
-  resets fail loudly until a provider (Resend, SES, SMTP…) is wired into `src/lib/email.ts`.
-- **Rate limiting needs the host's client-IP setup.** Better Auth keys limits by client IP from
-  `X-Forwarded-For`:
-  - a single address is trusted as-is — correct behind hosts that overwrite the header (Vercel,
-    Fly, Render), but spoofable on a server exposed directly;
-  - a chain (e.g. nginx appending) or no header resolves to *no IP*, and then **all clients share
-    one bucket per endpoint** (3 sign-ups/min site-wide, 5 sign-in attempts/min site-wide).
+Production is prepared for **Vercel + Neon + Resend** — see [DEPLOYMENT.md](DEPLOYMENT.md). What
+remains is on your side: creating the accounts, verifying a sending domain, and entering the
+secrets. Specifically:
 
-  Fix: set `advanced.ipAddress.ipAddressHeaders` and/or `trustedProxies` for the chosen host.
-  The E2E suite gives each browser its own `X-Forwarded-For` to model this, and asserts that limits
-  are per client.
-- **Rate-limit counters live in memory**, per server instance. Multiple instances or restarts reset
-  them. Fix: Better Auth's database or secondary storage.
-- **Secrets:** `.env.local` holds a generated `BETTER_AUTH_SECRET` for development only; production
-  needs its own secret and database URL.
+- **Email** is sent through Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set. Without them,
+  production refuses to start if email verification is required, and password reset is unavailable.
+- **Rate limiting** keys on Vercel's `x-vercel-forwarded-for` (not spoofable) and stores counters
+  in Postgres, shared across instances. Off Vercel, `AUTH_IP_HEADER` must name a header your proxy
+  overwrites; with none, all clients share one bucket.
+- **Preview deployments** need their own Neon branch and `BETTER_AUTH_URL`; sign-in on an arbitrary
+  preview URL fails the origin check by design.
+- **Not done here:** the actual account creation and first deploy, custom-domain DNS, and an
+  uptime monitor on `/api/health`.
 
 ## Behaviour by design (documented, may surprise)
 
@@ -71,4 +67,5 @@ Items marked **Phase 11** must be resolved before a public deployment.
 | Responsive | no horizontal overflow on 18 pages at Pixel 7 size; every section reachable from the mobile menu |
 
 Not covered: browsers other than Chromium, manual screen-reader testing (VoiceOver/NVDA), load
-testing, and production infrastructure (Phase 11).
+testing, and a live deployment (the production build was verified locally: CSP, headers, health,
+DB-backed rate limits).
