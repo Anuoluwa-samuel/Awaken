@@ -13,6 +13,14 @@ import { pageMetadata, SITE } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({ description: SITE.description, path: "/" });
 
+const REASSURANCE = "Free. Takes about a minute. No card, no app to install.";
+
+const STEPS = [
+  { title: "Pick your focus", text: "Choose what you're working on: fitness, learning, career, creativity and more." },
+  { title: "Get daily quests", text: "A short set of quests appears each day, timed to your own clock." },
+  { title: "Earn your rank", text: "Complete them for XP, attributes and streaks, and climb from E-Rank upward." },
+];
+
 const FEATURES = [
   { icon: ScrollText, title: "Daily quests", text: "Your routines become quests that reset on your own clock, in your own time zone." },
   { icon: TrendingUp, title: "Earned progression", text: "Every point of XP is recorded in a ledger and calculated on the server. No shortcuts." },
@@ -30,7 +38,7 @@ export default function LandingPage() {
             <Link href="/login">Sign in</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href="/register">Start</Link>
+            <Link href="/register">Start free</Link>
           </Button>
         </nav>
       </header>
@@ -53,15 +61,19 @@ export default function LandingPage() {
               AWAKEN turns workouts, study sessions, creative work and good habits into quests. Complete them to earn
               experience, raise your attributes and climb from E-Rank upward.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8">
               <Button asChild size="lg">
                 <Link href="/register">
                   Begin awakening <ArrowRight aria-hidden />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/login">I have an account</Link>
-              </Button>
+              <p className="mt-3 text-sm text-ink-muted">{REASSURANCE}</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                Already a player?{" "}
+                <Link href="/login" className="text-glow hover:underline">
+                  Sign in
+                </Link>
+              </p>
             </div>
           </div>
 
@@ -89,7 +101,29 @@ export default function LandingPage() {
           </Panel>
         </section>
 
-        <section aria-labelledby="features" className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+        <section aria-labelledby="how" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+          <h2 id="how" className="font-display text-xs font-semibold uppercase tracking-[0.35em] text-glow">
+            How it works
+          </h2>
+          <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="flex gap-4">
+                <span
+                  aria-hidden
+                  className="grid size-9 shrink-0 place-items-center rounded-md border border-line-strong font-mono text-sm text-glow"
+                >
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-display font-semibold tracking-wide">{step.title}</h3>
+                  <p className="mt-1 text-sm text-ink-muted">{step.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="features" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
           <h2 id="features" className="sr-only">
             Features
           </h2>
@@ -104,6 +138,22 @@ export default function LandingPage() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section aria-labelledby="closing" className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+          <Panel glow className="flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 id="closing" className="font-display text-2xl font-bold tracking-wide">
+                Your first quest is waiting.
+              </h2>
+              <p className="mt-1 text-sm text-ink-muted">{REASSURANCE}</p>
+            </div>
+            <Button asChild size="lg" className="shrink-0">
+              <Link href="/register">
+                Begin awakening <ArrowRight aria-hidden />
+              </Link>
+            </Button>
+          </Panel>
         </section>
       </main>
       <LegalFooter />
