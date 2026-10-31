@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 import { RegisterForm } from "@/components/auth/register-form";
 import { getSession } from "@/lib/auth/session";
+import { issueFormToken } from "@/lib/auth/spam-rules";
 import { env } from "@/lib/env";
 
 export const metadata: Metadata = pageMetadata({
@@ -29,7 +30,10 @@ export default async function RegisterPage() {
         </>
       }
     >
-      <RegisterForm requireVerification={env.REQUIRE_EMAIL_VERIFICATION} />
+      <RegisterForm
+        requireVerification={env.REQUIRE_EMAIL_VERIFICATION}
+        formToken={issueFormToken(env.BETTER_AUTH_SECRET)}
+      />
     </AuthCard>
   );
 }

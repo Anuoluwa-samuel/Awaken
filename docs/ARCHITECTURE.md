@@ -489,6 +489,18 @@ cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPT
 request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
 Only an age range is stored, never a date of birth.
 
+**Spam protection** (`src/lib/auth/spam-rules.ts`, before-hook on `/sign-up/email`): a honeypot
+field (`website`, off-screen, `tabindex=-1`, `aria-hidden`); a signed form token issued by the
+register page (HMAC with `BETTER_AUTH_SECRET`) that must be at least `SIGN_UP_MIN_SECONDS` (3)
+and at most 24 h old, so scripts posting to the API directly are refused; a short list of
+throwaway-inbox domains (the only check that explains itself, since a person can fix it); and a
+per-IP sign-up limit of 5/hour. Failures other than the email return a deliberately vague
+`SIGN_UP_BLOCKED` and log the reason server-side. Optional Vercel BotID
+(`NEXT_PUBLIC_BOTID_ENABLED`, `src/instrumentation-client.ts` + the auth route's `POST`) guards
+sign-up, sign-in and password-reset requests; off-Vercel requests are treated as human. There's no
+public user content (quests, goals and notes are visible only to their owner), so content spam
+has nowhere to appear.
+
 **Search & sharing** (`src/lib/site.ts`): public pages (`PUBLIC_ROUTES`: `/`, `/register`,
 `/login`, `/terms`, `/privacy`) get a description, canonical URL and Open Graph/Twitter tags via
 `pageMetadata`; everything else (`/system/*`, `/onboarding`, reset/verify pages) is `noindex,

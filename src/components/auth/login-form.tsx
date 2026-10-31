@@ -40,7 +40,9 @@ export function LoginForm({ next }: { next: string }) {
           ? "Verify your email first — we've sent you a new link."
           : error.status === 429
             ? "Too many attempts. Wait a minute and try again."
-            : "Invalid email or password.",
+            : error.code === "BOT_DETECTED" && error.message
+              ? error.message
+              : "Invalid email or password.",
       );
       return;
     }

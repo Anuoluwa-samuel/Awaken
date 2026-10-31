@@ -102,7 +102,7 @@ Delete the file when you're done if you don't want production secrets on disk.
 
 ## How production-specific behaviour is wired
 
-- **Rate limiting** (sign-up 3/min, sign-in 10/min, password-reset 3/5 min, …) is keyed by client IP
+- **Rate limiting** (sign-up 5/hour, sign-in 10/min, password-reset 3/5 min, …) is keyed by client IP
   and stored in Postgres (`rate_limit` table) so every function instance shares the counters. On
   Vercel the IP comes from `x-vercel-forwarded-for`, which Vercel sets itself — clients can't spoof
   it. Off Vercel, set `AUTH_IP_HEADER` to the header your proxy **overwrites** (e.g. `x-real-ip`);
@@ -123,6 +123,26 @@ Delete the file when you're done if you don't want production secrets on disk.
   camera/mic/geolocation disabled, no `X-Powered-By`. Verified against a local production build.
 - **Errors:** route-level and global error pages never show stack traces; production builds strip
   error messages and show a reference digest you can match in Vercel's logs.
+
+## Bot protection (optional, recommended once live)
+
+Sign-up already blocks scripts on its own: a hidden honeypot field, a signed form token that must be
+3 s – 24 h old, a list of throwaway-inbox domains, and 5 sign-ups per hour per IP. For browser bots
+that get past those, AWAKEN includes **Vercel BotID** (invisible, no puzzles) on sign-up, sign-in
+and password reset. It's **off by default** because its challenge script can only be tested on
+Vercel, against AWAKEN's strict Content-Security-Policy:
+
+1. Vercel → Settings → Environment Variables: add `NEXT_PUBLIC_BOTID_ENABLED` = `true`
+   (Production), and redeploy. (It's read at build time, so a redeploy is required.)
+2. In a normal browser window, open the live site with DevTools → Console, and **create a test
+   account and sign in**. Both must work, and the console must show no "Content Security Policy"
+   errors.
+3. If sign-up shows "Your browser didn't pass our automated-traffic check", or the console shows
+   CSP errors, set the variable back to `false` and redeploy, then tell whoever maintains the CSP
+   in `next.config.ts` which source was blocked.
+
+BotID's free *Basic* mode works on every plan; *Deep Analysis* (Pro/Enterprise) is a toggle under
+Firewall → Rules. `curl` requests to protected endpoints are refused once it's on, by design.
 
 ## Preview deployments
 

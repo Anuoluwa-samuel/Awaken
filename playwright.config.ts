@@ -9,6 +9,7 @@ config({ path: ".env.local", quiet: true });
 const base = new URL(process.env.DATABASE_URL ?? "postgres://awaken:awaken@localhost:54350/awaken");
 base.pathname = "/awaken_e2e";
 export const E2E_DATABASE_URL = base.toString();
+export const E2E_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "e2e-secret-e2e-secret-e2e-secret-e2e";
 const PORT = 3200;
 
 export default defineConfig({
@@ -39,8 +40,10 @@ export default defineConfig({
       DATABASE_URL: E2E_DATABASE_URL,
       BETTER_AUTH_URL: `http://localhost:${PORT}`,
       NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
-      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "e2e-secret-e2e-secret-e2e-secret-e2e",
+      BETTER_AUTH_SECRET: E2E_AUTH_SECRET,
       REQUIRE_EMAIL_VERIFICATION: "false",
+      // Playwright fills the sign-up form instantly; the minimum fill time is unit-tested instead.
+      SIGN_UP_MIN_SECONDS: "0",
     },
   },
 });

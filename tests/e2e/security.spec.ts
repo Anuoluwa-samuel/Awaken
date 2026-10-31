@@ -65,7 +65,7 @@ test("signing out ends the session", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 });
 
-test("sign-ups are rate limited per client, not globally", async ({ browser }) => {
+test("sign-ups are limited to 5 an hour per client, not globally", async ({ browser }) => {
   const sameIp = "198.51.100.7";
   const tryRegister = async (ip: string) => {
     const ctx = await newPlayerContext(browser, ip);
@@ -80,14 +80,14 @@ test("sign-ups are rate limited per client, not globally", async ({ browser }) =
     await page.getByRole("button", { name: /awaken/i }).click();
     const outcome = await Promise.race([
       page.waitForURL("**/onboarding").then(() => "registered" as const),
-      page.getByText("Too many attempts").waitFor().then(() => "limited" as const),
+      page.getByText("Too many sign-ups from this network").waitFor().then(() => "limited" as const),
     ]);
     await ctx.close();
     return outcome;
   };
   const results = [];
-  for (let i = 0; i < 4; i++) results.push(await tryRegister(sameIp));
-  expect(results).toEqual(["registered", "registered", "registered", "limited"]);
+  for (let i = 0; i < 6; i++) results.push(await tryRegister(sameIp));
+  expect(results).toEqual([...Array(5).fill("registered"), "limited"]);
   // Another client is unaffected.
   expect(await tryRegister("198.51.100.8")).toBe("registered");
 });

@@ -1,4 +1,6 @@
 import { expect, test } from "./fixtures";
+import { issueFormToken } from "@/lib/auth/spam-rules";
+import { E2E_AUTH_SECRET } from "../../playwright.config";
 import { PASSWORD, sql, uniqueEmail, visit } from "./support";
 
 test("sign-up asks a neutral age question and records consent", async ({ page }) => {
@@ -41,7 +43,8 @@ test("the sign-up API enforces the same rules as the form", async ({ request }) 
   // A different client IP per call keeps this clear of the 3-per-minute sign-up limit.
   const signUp = (extra: object) =>
     request.post("/api/auth/sign-up/email", {
-      data: { name: "Bypass", email: uniqueEmail("api"), password: PASSWORD, ...extra },
+      // A valid form token, as the register page would issue, so these hit the consent checks.
+      data: { name: "Bypass", email: uniqueEmail("api"), password: PASSWORD, formToken: issueFormToken(E2E_AUTH_SECRET), ...extra },
       headers: { origin: "http://localhost:3200", "x-forwarded-for": `203.0.113.${++n}` },
     });
   const refused = async (extra: object, code: string) => {

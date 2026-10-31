@@ -48,7 +48,7 @@ function Checkbox({
   );
 }
 
-export function RegisterForm({ requireVerification }: { requireVerification: boolean }) {
+export function RegisterForm({ requireVerification, formToken }: { requireVerification: boolean; formToken: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const form = useForm<z.infer<typeof registerSchema>>({
@@ -60,7 +60,8 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
   const ageAnswer = useWatch({ control: form.control, name: "ageAnswer" });
   const tooYoung = ageAnswer === "under13";
 
-  const onSubmit = form.handleSubmit(async ({ name, email, password, ageAnswer, guardianConsent, acceptTerms }) => {
+  const onSubmit = form.handleSubmit(async ({ name, email, password, ageAnswer, guardianConsent, acceptTerms }, event) => {
+    const website = (event?.target as HTMLFormElement | undefined)?.elements.namedItem("website");
     setError(null);
     const { error } = await authClient.signUp.email({
       name,
@@ -69,13 +70,17 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
       callbackURL: "/onboarding",
       // Checked again on the server (src/lib/auth/consent-rules.ts) and stamped onto the account.
       ...{ ageAnswer, guardianConsent: ageAnswer === "teen" && guardianConsent, acceptTerms },
+      // Anti-spam (src/lib/auth/spam-rules.ts): the signed form token and the honeypot field.
+      ...{ formToken, website: website instanceof HTMLInputElement ? website.value : "" },
     });
     if (error) {
       // Deliberately vague so the form can't be used to probe which emails are registered.
       setError(
         error.status === 429
-          ? "Too many attempts. Wait a minute and try again."
-          : "We couldn't create that account. If you already have one, sign in instead.",
+          ? "Too many sign-ups from this network. Try again later."
+          : (error.code === "DISPOSABLE_EMAIL" || error.code === "BOT_DETECTED") && error.message
+            ? error.message
+            : "We couldn't create that account. If you already have one, sign in instead.",
       );
       return;
     }
@@ -90,6 +95,11 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-4">
       {error ? <FormMessage tone="error">{error}</FormMessage> : null}
+      {/* Honeypot: off-screen and skipped by keyboard and screen readers, so only bots fill it. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="website">Website</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
       <Field id="name" label="Player name" error={errors.name?.message}>
         <Input id="name" autoComplete="nickname" aria-invalid={!!errors.name} {...form.register("name")} />
       </Field>

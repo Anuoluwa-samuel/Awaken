@@ -36,6 +36,15 @@ secrets. Specifically:
 - `auth_lockout` keeps a row per attempted email; `pruneLockouts()` exists for housekeeping but no
   scheduled job runs it yet.
 
+## Spam protection
+
+- **BotID is off by default** (`NEXT_PUBLIC_BOTID_ENABLED`) until it's verified on a Vercel
+  deployment; see DEPLOYMENT.md. Without it, a browser-driving bot that waits 3 s, skips the
+  honeypot and uses a real email domain can still sign up, at most 5 times an hour per IP.
+- **Password-reset emails** are limited per IP (3 per 5 min), not per recipient, so someone using
+  many IPs could send repeated reset emails to one address. Matters once email is switched on.
+- The throwaway-domain list is short and hand-kept (`spam-rules.ts`).
+
 ## Legal & privacy
 
 - **No contact email yet.** `LEGAL.contactEmail` in `src/lib/legal.ts` is empty until there's a

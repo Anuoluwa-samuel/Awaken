@@ -9,6 +9,7 @@ import { emailTransportAvailable, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
 import { checkSignUpConsent, type ConsentBody } from "@/lib/auth/consent-rules";
 import { describeWait, normaliseEmail } from "@/lib/auth/lockout-rules";
+import { checkSignUpSpam, type SpamBody } from "@/lib/auth/spam-rules";
 import { LEGAL } from "@/lib/legal";
 import { purgeAccountExtras } from "@/server/services/account";
 import { clearLockout, recordFailure, reserveAttempt } from "@/server/services/lockout";
@@ -117,7 +118,8 @@ export const auth = betterAuth({
     customRules: {
       // Per-IP; per-account guessing is handled by the lockout (5 wrong → locked).
       "/sign-in/email": { window: 60, max: 10 },
-      "/sign-up/email": { window: 60, max: 3 },
+      // 5 per hour per IP: plenty for a household or classroom, too few for a sign-up farm.
+      "/sign-up/email": { window: 3600, max: 5 },
       "/request-password-reset": { window: 300, max: 3 },
       "/reset-password": { window: 300, max: 5 },
       "/send-verification-email": { window: 300, max: 3 },
@@ -149,6 +151,13 @@ export const auth = betterAuth({
       }
       if (ctx.path === "/delete-user/callback") throw new APIError("NOT_FOUND");
       if (ctx.path === SIGN_UP) {
+        const spam = checkSignUpSpam(ctx.body as SpamBody | undefined, env.BETTER_AUTH_SECRET, env.SIGN_UP_MIN_SECONDS);
+        if (!spam.ok) {
+          if (spam.code === "DISPOSABLE_EMAIL") throw new APIError("BAD_REQUEST", { code: spam.code, message: spam.message });
+          // Deliberately vague: telling a bot which check it failed helps it adapt.
+          console.warn(`[sign-up] blocked: ${spam.reason}`);
+          throw new APIError("BAD_REQUEST", { code: spam.code, message: "We couldn't create that account." });
+        }
         const consent = checkSignUpConsent(ctx.body as ConsentBody | undefined);
         if (!consent.ok) throw new APIError("BAD_REQUEST", { code: consent.code, message: consent.message });
         return;

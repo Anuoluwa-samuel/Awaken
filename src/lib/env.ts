@@ -17,6 +17,10 @@ const schema = z
     EMAIL_FROM: z.string().min(3).optional(),
     /** Connection pool size per server instance (Vercel functions: keep it small). */
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).optional(),
+    /** Minimum seconds between opening the sign-up form and submitting it (anti-bot). Tests use 0. */
+    SIGN_UP_MIN_SECONDS: z.coerce.number().min(0).max(60).default(3),
+    /** Vercel BotID on sign-up, sign-in and password reset. Off until verified on a deployment. */
+    NEXT_PUBLIC_BOTID_ENABLED: bool,
   })
   .refine((e) => !e.RESEND_API_KEY || !!e.EMAIL_FROM, {
     path: ["EMAIL_FROM"],
