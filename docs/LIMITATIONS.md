@@ -16,8 +16,9 @@ Production is prepared for **Vercel + Neon + Resend** — see [DEPLOYMENT.md](DE
 remains is on your side: creating the accounts, verifying a sending domain, and entering the
 secrets. Specifically:
 
-- **Email** is sent through Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set. Without them,
-  production refuses to start if email verification is required, and password reset is unavailable.
+- **Email** is sent through Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set. Without them
+  (e.g. no sending domain yet), production runs with verification off and the password-reset page
+  says resets aren't available; it refuses to start if verification is required.
 - **Rate limiting** keys on Vercel's `x-vercel-forwarded-for` (not spoofable) and stores counters
   in Postgres, shared across instances. Off Vercel, `AUTH_IP_HEADER` must name a header your proxy
   overwrites; with none, all clients share one bucket.

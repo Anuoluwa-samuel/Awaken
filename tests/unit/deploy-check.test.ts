@@ -27,7 +27,7 @@ describe("checkProductionEnv", () => {
       RESEND_API_KEY: undefined,
       EMAIL_FROM: undefined,
     });
-    for (const k of ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "RESEND_API_KEY", "EMAIL_FROM"]) {
+    for (const k of ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "RESEND_API_KEY"]) {
       expect(out).toContain(`fail:${k}`);
     }
   });
@@ -40,6 +40,17 @@ describe("checkProductionEnv", () => {
       REQUIRE_EMAIL_VERIFICATION: "false",
     });
     expect(out).toEqual(expect.arrayContaining(["warn:DATABASE_URL", "warn:MIGRATION_DATABASE_URL", "warn:REQUIRE_EMAIL_VERIFICATION"]));
+  });
+
+  it("allows launching without email when verification is off", () => {
+    const out = checkProductionEnv({ ...good, RESEND_API_KEY: undefined, EMAIL_FROM: undefined, REQUIRE_EMAIL_VERIFICATION: "false" });
+    expect(out.some((f) => f.level === "fail")).toBe(false);
+    expect(out.find((f) => f.key === "RESEND_API_KEY")).toMatchObject({ level: "warn", message: expect.stringMatching(/password-reset/) });
+  });
+
+  it("fails a half-configured email setup", () => {
+    expect(levels({ ...good, RESEND_API_KEY: undefined })).toContain("fail:RESEND_API_KEY");
+    expect(levels({ ...good, EMAIL_FROM: undefined })).toContain("fail:EMAIL_FROM");
   });
 
   it("never includes secret values in messages", () => {

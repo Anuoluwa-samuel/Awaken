@@ -31,6 +31,19 @@ statements there automatically). Migrations run DDL in transactions and use the 
 Until the domain is verified, `onboarding@resend.dev` only delivers to your own Resend account
 address — fine for a smoke test, not for players.
 
+### No domain yet? Launch without email
+
+Skip this step: leave `RESEND_API_KEY` and `EMAIL_FROM` unset and set
+`REQUIRE_EMAIL_VERIFICATION=false`. Everything works except email:
+
+- sign-up doesn't ask players to confirm their address;
+- **Forgot password** says resets aren't available on this server instead of pretending to send
+  a link (so make sure you remember your own password);
+- `pnpm deploy:check` reports a WARN, not a FAIL.
+
+When you have a domain (≈ $10/year from Cloudflare, Namecheap, Porkbun…), do step 2, add the two
+variables, set `REQUIRE_EMAIL_VERIFICATION=true`, and redeploy. No code changes are needed.
+
 ## 3. Migrate and seed the production database (once, from your machine)
 
 ```bash
@@ -58,9 +71,9 @@ so local commands don't hit production.
    | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` — new, production-only |
    | `BETTER_AUTH_URL` | the public URL, e.g. `https://awaken.your-domain.com` |
    | `NEXT_PUBLIC_APP_URL` | same as `BETTER_AUTH_URL` |
-   | `RESEND_API_KEY` | `re_…` |
-   | `EMAIL_FROM` | `AWAKEN <system@mail.your-domain.com>` |
-   | `REQUIRE_EMAIL_VERIFICATION` | `true` |
+   | `RESEND_API_KEY` | `re_…` (omit until you have a sending domain) |
+   | `EMAIL_FROM` | `AWAKEN <system@mail.your-domain.com>` (omit with the key) |
+   | `REQUIRE_EMAIL_VERIFICATION` | `true` with email, `false` without |
 
 3. **Deploy.** Then **Settings → Domains** to add your domain, and update `BETTER_AUTH_URL` /
    `NEXT_PUBLIC_APP_URL` if the URL changed (redeploy after changing variables).

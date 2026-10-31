@@ -44,16 +44,23 @@ export function checkProductionEnv(env: Record<string, string | undefined>): Fin
   const app = url(env.NEXT_PUBLIC_APP_URL);
   if (auth && app && app.origin !== auth.origin) add("warn", "NEXT_PUBLIC_APP_URL", "differs from BETTER_AUTH_URL");
 
-  if (!env.RESEND_API_KEY) add("fail", "RESEND_API_KEY", "missing — verification and password-reset emails can't be sent");
-  else if (!env.RESEND_API_KEY.startsWith("re_")) add("fail", "RESEND_API_KEY", "doesn't look like a Resend key (re_…)");
-  else add("pass", "RESEND_API_KEY", "set");
+  const verificationOn = env.REQUIRE_EMAIL_VERIFICATION === "true";
+  if (!env.RESEND_API_KEY && !env.EMAIL_FROM) {
+    // Launching without a sending domain is allowed, as long as nothing depends on email.
+    if (verificationOn) add("fail", "RESEND_API_KEY", "missing, but REQUIRE_EMAIL_VERIFICATION=true needs email");
+    else add("warn", "RESEND_API_KEY", "not set — no verification or password-reset emails until it is");
+  } else {
+    if (!env.RESEND_API_KEY) add("fail", "RESEND_API_KEY", "missing while EMAIL_FROM is set");
+    else if (!env.RESEND_API_KEY.startsWith("re_")) add("fail", "RESEND_API_KEY", "doesn't look like a Resend key (re_…)");
+    else add("pass", "RESEND_API_KEY", "set");
 
-  const from = env.EMAIL_FROM ?? "";
-  if (!/@[^\s>]+\.[^\s>]+/.test(from)) add("fail", "EMAIL_FROM", "missing — e.g. AWAKEN <system@your-domain.com> on a verified domain");
-  else if (/@resend\.dev\b/i.test(from)) add("warn", "EMAIL_FROM", "resend.dev can only send to your own address; verify a domain");
-  else add("pass", "EMAIL_FROM", "set");
+    const from = env.EMAIL_FROM ?? "";
+    if (!/@[^\s>]+\.[^\s>]+/.test(from)) add("fail", "EMAIL_FROM", "missing — e.g. AWAKEN <system@your-domain.com> on a verified domain");
+    else if (/@resend\.dev\b/i.test(from)) add("warn", "EMAIL_FROM", "resend.dev can only send to your own address; verify a domain");
+    else add("pass", "EMAIL_FROM", "set");
+  }
 
-  if (env.REQUIRE_EMAIL_VERIFICATION !== "true") {
+  if (!verificationOn) {
     add("warn", "REQUIRE_EMAIL_VERIFICATION", "off — accounts can sign in without confirming their email");
   } else add("pass", "REQUIRE_EMAIL_VERIFICATION", "on");
 

@@ -26,6 +26,10 @@ export function ForgotForm() {
       setError("Too many requests. Try again in a few minutes.");
       return;
     }
+    if (error && error.status >= 500) {
+      setError("We couldn't send the email right now. Try again in a few minutes.");
+      return;
+    }
     // Same response whether or not the account exists.
     setSent(true);
   });
