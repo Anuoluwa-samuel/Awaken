@@ -1,4 +1,5 @@
 import { ArrowRight, Flame, ScrollText, Shield, TrendingUp } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Wordmark } from "@/components/brand/logo";
@@ -8,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
 import { RANKS } from "@/lib/progression/config";
+import { pageMetadata, SITE } from "@/lib/site";
+
+export const metadata: Metadata = pageMetadata({ description: SITE.description, path: "/" });
 
 const FEATURES = [
   { icon: ScrollText, title: "Daily quests", text: "Your routines become quests that reset on your own clock, in your own time zone." },

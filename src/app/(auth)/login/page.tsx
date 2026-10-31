@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -7,7 +8,11 @@ import { FormMessage } from "@/components/ui/field";
 import { getSession } from "@/lib/auth/session";
 import { safeNextPath } from "@/lib/validation/auth";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = pageMetadata({
+  title: "Sign in",
+  description: "Sign in to AWAKEN to see today's quests, your level and your streaks.",
+  path: "/login",
+});
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;

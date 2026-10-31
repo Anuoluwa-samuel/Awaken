@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { PRIVATE_PAGE } from "@/lib/site";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
 import { ResetForm } from "@/components/auth/reset-form";
 import { FormMessage } from "@/components/ui/field";
 
-export const metadata: Metadata = { title: "Choose a new password" };
+export const metadata: Metadata = { title: "Choose a new password", ...PRIVATE_PAGE };
 
 export default async function ResetPasswordPage({ searchParams }: PageProps<"/reset-password">) {
   const { token, error } = await searchParams;

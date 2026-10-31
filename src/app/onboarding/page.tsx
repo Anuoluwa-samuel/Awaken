@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { PRIVATE_PAGE } from "@/lib/site";
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand/logo";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
@@ -7,7 +8,7 @@ import { db } from "@/db";
 import { playerProfile } from "@/db/schema";
 import { requireUser } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Player setup" };
+export const metadata: Metadata = { title: "Player setup", ...PRIVATE_PAGE };
 
 export default async function OnboardingPage() {
   const user = await requireUser();

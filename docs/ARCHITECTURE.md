@@ -489,6 +489,15 @@ cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPT
 request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
 Only an age range is stored, never a date of birth.
 
+**Search & sharing** (`src/lib/site.ts`): public pages (`PUBLIC_ROUTES`: `/`, `/register`,
+`/login`, `/terms`, `/privacy`) get a description, canonical URL and Open Graph/Twitter tags via
+`pageMetadata`; everything else (`/system/*`, `/onboarding`, reset/verify pages) is `noindex,
+nofollow`. The origin comes from `BETTER_AUTH_URL`, so canonicals, the sitemap and share links
+always match the deployed URL. Generated assets: `opengraph-image.tsx` (1200×630 share card),
+`apple-icon.tsx`, `/icons/192|512` for `manifest.ts`, and `/favicon.ico` (PNG) beside `icon.svg`;
+all draw the logo from `icon.svg` with `next/og`. `robots.ts` disallows `/system`, `/onboarding`,
+`/api/` and points at `sitemap.ts`.
+
 **Legal pages:** `/terms` and `/privacy` are generated from `src/lib/legal.ts` (operator, contact
 email, governing law, minimum age, last-updated date). Keep the Privacy Policy in step with what
 the schema stores; if a feature starts collecting something new, update both.

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { PRIVATE_PAGE } from "@/lib/site";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
 import { ResendVerification } from "@/components/auth/resend-verification";
 import { z } from "zod";
 
-export const metadata: Metadata = { title: "Verify your email" };
+export const metadata: Metadata = { title: "Verify your email", ...PRIVATE_PAGE };
 
 export default async function VerifyEmailPage({ searchParams }: PageProps<"/verify-email">) {
   const { email } = await searchParams;

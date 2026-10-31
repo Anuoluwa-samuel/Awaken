@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { Contact, LegalPage } from "@/components/legal/legal-page";
 import { LEGAL } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service",
   description: "The rules for using AWAKEN: eligibility, your account, acceptable use and our responsibilities.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/logo";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -7,9 +8,13 @@ import { PlayerSummary } from "@/components/shell/player-summary";
 import { ProfileMenu } from "@/components/shell/profile-menu";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
+import { PRIVATE_PAGE } from "@/lib/site";
 import { getPlayerContext } from "@/server/player-context";
 import { getShellSummary } from "@/server/services/dashboard";
 import { listNotifications } from "@/server/services/notifications";
+
+// Everything under /system is private to the signed-in player.
+export const metadata: Metadata = PRIVATE_PAGE;
 
 function initials(name: string) {
   return name

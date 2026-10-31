@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -6,7 +7,11 @@ import { RegisterForm } from "@/components/auth/register-form";
 import { getSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Create account" };
+export const metadata: Metadata = pageMetadata({
+  title: "Create account",
+  description: "Create a free AWAKEN account and turn your routines into quests that earn XP, levels and ranks.",
+  path: "/register",
+});
 
 export default async function RegisterPage() {
   if (await getSession()) redirect("/system");

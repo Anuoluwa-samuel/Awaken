@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { PRIVATE_PAGE } from "@/lib/site";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
 import { ForgotForm } from "@/components/auth/forgot-form";
 import { FormMessage } from "@/components/ui/field";
 import { emailTransportAvailable } from "@/lib/email";
 
-export const metadata: Metadata = { title: "Reset password" };
+export const metadata: Metadata = { title: "Reset password", ...PRIVATE_PAGE };
 // Decided per request: whether email can be sent depends on deployment settings.
 export const dynamic = "force-dynamic";
 

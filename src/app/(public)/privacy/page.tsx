@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { Contact, LegalPage } from "@/components/legal/legal-page";
 import { LEGAL } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description: "What AWAKEN collects, why, who processes it, how long it's kept and how to delete it.",
-};
+  path: "/privacy",
+});
 
 // Keep this in step with what the code actually stores: the schema in src/db/schema and the
 // processors in docs/DEPLOYMENT.md. If a feature starts collecting something new, update this.
