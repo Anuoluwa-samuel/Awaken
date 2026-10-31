@@ -7,11 +7,14 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { emailTransportAvailable, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
+import { checkSignUpConsent, type ConsentBody } from "@/lib/auth/consent-rules";
 import { describeWait, normaliseEmail } from "@/lib/auth/lockout-rules";
+import { LEGAL } from "@/lib/legal";
 import { purgeAccountExtras } from "@/server/services/account";
 import { clearLockout, recordFailure, reserveAttempt } from "@/server/services/lockout";
 
 const SIGN_IN = "/sign-in/email";
+const SIGN_UP = "/sign-up/email";
 const DELETE_USER = "/delete-user";
 
 function lockedError(retryAfterSeconds: number) {
@@ -71,11 +74,32 @@ export const auth = betterAuth({
     },
   },
   user: {
+    // Written only by the create hook below, never from request input. The form sends its
+    // answers as ageAnswer/guardianConsent/acceptTerms, which Better Auth ignores as unknown keys.
+    additionalFields: {
+      ageGroup: { type: "string", required: false, input: false },
+      termsAcceptedAt: { type: "date", required: false, input: false },
+      termsVersion: { type: "string", required: false, input: false },
+    },
     // Self-serve deletion from Settings. The before-hook below makes the password mandatory.
     deleteUser: {
       enabled: true,
       beforeDelete: async (user) => {
         await purgeAccountExtras(db, user.id, user.email);
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Stamp the consent the before-hook already validated onto the new user row.
+        before: async (user, ctx) => {
+          const consent = checkSignUpConsent(ctx?.body as ConsentBody | undefined);
+          if (!consent.ok) throw new APIError("BAD_REQUEST", { code: consent.code, message: consent.message });
+          return {
+            data: { ...user, ageGroup: consent.ageGroup, termsAcceptedAt: new Date(), termsVersion: LEGAL.updated },
+          };
+        },
       },
     },
   },
@@ -124,6 +148,11 @@ export const auth = betterAuth({
         return;
       }
       if (ctx.path === "/delete-user/callback") throw new APIError("NOT_FOUND");
+      if (ctx.path === SIGN_UP) {
+        const consent = checkSignUpConsent(ctx.body as ConsentBody | undefined);
+        if (!consent.ok) throw new APIError("BAD_REQUEST", { code: consent.code, message: consent.message });
+        return;
+      }
       if (ctx.path !== SIGN_IN) return;
       const email = normaliseEmail((ctx.body as { email?: unknown } | undefined)?.email);
       if (!email) return;

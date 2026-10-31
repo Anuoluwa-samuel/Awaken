@@ -75,6 +75,8 @@ test("sign-ups are rate limited per client, not globally", async ({ browser }) =
     await page.getByLabel("Email").fill(uniqueEmail("rl"));
     await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     await page.getByLabel("Confirm password").fill(PASSWORD);
+    await page.getByLabel("18+").check();
+    await page.getByLabel(/I agree to the Terms/).check();
     await page.getByRole("button", { name: /awaken/i }).click();
     const outcome = await Promise.race([
       page.waitForURL("**/onboarding").then(() => "registered" as const),

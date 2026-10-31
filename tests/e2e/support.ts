@@ -39,6 +39,8 @@ export async function registerPlayer(page: Page, opts: { name?: string; areas?: 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByLabel("Confirm password").fill(PASSWORD);
+  await page.getByLabel("18+").check();
+  await page.getByLabel(/I agree to the Terms/).check();
   await page.getByRole("button", { name: /awaken/i }).click();
   await page.waitForURL("**/onboarding");
   await dismissIntro(page);

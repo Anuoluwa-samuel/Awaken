@@ -31,6 +31,10 @@ export default function PrivacyPage() {
           for it.
         </li>
         <li>Your settings: time zone, the hour your day starts, and the focus areas you choose.</li>
+        <li>
+          Your age range (13–17 or 18+, not your date of birth), whether a parent or guardian agreed for under-18s, and
+          when you accepted these terms.
+        </li>
       </ul>
       <h3>What you do in the game</h3>
       <ul>

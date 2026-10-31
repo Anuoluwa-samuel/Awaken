@@ -479,6 +479,16 @@ in one statement. `purgeAccountExtras` (`src/server/services/account.ts`, the `b
 removes the rest: audit events the player triggered, pending reset tokens, and the lockout record
 for their email. An integration test checks every table that has a user column afterwards.
 
+**Age & consent at sign-up:** the form asks a neutral "How old are you?" (Under 13 / 13–17 / 18+,
+nothing preselected), requires a parent/guardian checkbox for 13–17 (NDPA 2023 treats under-18s
+as children), and a Terms + Privacy checkbox. `checkSignUpConsent` (`src/lib/auth/consent-rules.ts`)
+is shared by the form schema and a before-hook on `/sign-up/email`, so the API refuses the same
+cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPTED`). A
+`databaseHooks.user.create.before` hook stamps `user.age_group` (`adult`/`teen`),
+`terms_accepted_at` and `terms_version` (= `LEGAL.updated`). Those columns are `input: false`, so a
+request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
+Only an age range is stored, never a date of birth.
+
 **Legal pages:** `/terms` and `/privacy` are generated from `src/lib/legal.ts` (operator, contact
 email, governing law, minimum age, last-updated date). Keep the Privacy Policy in step with what
 the schema stores; if a feature starts collecting something new, update both.

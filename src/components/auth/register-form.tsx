@@ -5,26 +5,71 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { LEGAL } from "@/lib/legal";
 import { registerSchema } from "@/lib/validation/auth";
+
+const AGE_OPTIONS = [
+  { value: "under13", label: `Under ${LEGAL.minimumAge}` },
+  { value: "teen", label: `${LEGAL.minimumAge}–17` },
+  { value: "adult", label: "18+" },
+] as const;
+
+function Checkbox({
+  id,
+  error,
+  children,
+  ...input
+}: { id: string; error?: string; children: React.ReactNode } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="grid gap-1">
+      <label htmlFor={id} className="flex items-start gap-2 text-sm text-ink-muted">
+        <input
+          id={id}
+          type="checkbox"
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className="mt-0.5 size-4 shrink-0 accent-[#4f9dff]"
+          {...input}
+        />
+        <span>{children}</span>
+      </label>
+      {error ? (
+        <p id={`${id}-error`} role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function RegisterForm({ requireVerification }: { requireVerification: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", password: "", confirm: "" },
+    // No age is preselected: a neutral question, so nobody is nudged toward "adult".
+    defaultValues: { name: "", email: "", password: "", confirm: "", guardianConsent: false, acceptTerms: false },
   });
   const { errors, isSubmitting } = form.formState;
+  const ageAnswer = useWatch({ control: form.control, name: "ageAnswer" });
+  const tooYoung = ageAnswer === "under13";
 
-  const onSubmit = form.handleSubmit(async ({ name, email, password }) => {
+  const onSubmit = form.handleSubmit(async ({ name, email, password, ageAnswer, guardianConsent, acceptTerms }) => {
     setError(null);
-    const { error } = await authClient.signUp.email({ name, email, password, callbackURL: "/onboarding" });
+    const { error } = await authClient.signUp.email({
+      name,
+      email,
+      password,
+      callbackURL: "/onboarding",
+      // Checked again on the server (src/lib/auth/consent-rules.ts) and stamped onto the account.
+      ...{ ageAnswer, guardianConsent: ageAnswer === "teen" && guardianConsent, acceptTerms },
+    });
     if (error) {
       // Deliberately vague so the form can't be used to probe which emails are registered.
       setError(
@@ -69,8 +114,44 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
           {...form.register("confirm")}
         />
       </Field>
-      <p className="text-xs text-ink-muted">
-        By creating an account, you agree to the{" "}
+      <fieldset className="grid gap-2" aria-describedby={errors.ageAnswer ? "age-error" : undefined}>
+        <legend className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+          How old are you?
+        </legend>
+        <div className="grid grid-cols-3 gap-2">
+          {AGE_OPTIONS.map(({ value, label }) => (
+            <label
+              key={value}
+              className="relative flex cursor-pointer items-center justify-center gap-2 rounded-md border border-line px-2 py-2 text-sm text-ink-muted has-[:checked]:border-glow has-[:checked]:text-ink has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-glow"
+            >
+              <input
+                type="radio"
+                value={value}
+                className="absolute inset-0 cursor-pointer appearance-none rounded-md opacity-0"
+                {...form.register("ageAnswer")}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        {errors.ageAnswer && !tooYoung ? (
+          <p id="age-error" role="alert" className="text-xs text-danger">
+            {errors.ageAnswer.message}
+          </p>
+        ) : null}
+      </fieldset>
+      {tooYoung ? (
+        <FormMessage tone="info">
+          Sorry, you need to be {LEGAL.minimumAge} or older to use AWAKEN. Come back when you are. We&apos;ll be here.
+        </FormMessage>
+      ) : null}
+      {ageAnswer === "teen" ? (
+        <Checkbox id="guardianConsent" error={errors.guardianConsent?.message} {...form.register("guardianConsent")}>
+          A parent or guardian has agreed to me using AWAKEN.
+        </Checkbox>
+      ) : null}
+      <Checkbox id="acceptTerms" error={errors.acceptTerms?.message} {...form.register("acceptTerms")}>
+        I agree to the{" "}
         <Link href="/terms" target="_blank" className="text-glow hover:underline">
           Terms
         </Link>{" "}
@@ -79,8 +160,8 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
           Privacy Policy
         </Link>
         .
-      </p>
-      <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2">
+      </Checkbox>
+      <Button type="submit" size="lg" disabled={isSubmitting || tooYoung} className="mt-2">
         <Sparkles aria-hidden />
         {isSubmitting ? "Initializing…" : "Awaken"}
       </Button>

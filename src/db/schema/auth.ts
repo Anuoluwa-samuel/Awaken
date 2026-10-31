@@ -7,6 +7,11 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Age and legal consent, recorded at sign-up (src/lib/auth/server.ts). Null for accounts that
+  // predate them. "teen" = 13–17 with a parent or guardian's permission.
+  ageGroup: text("age_group", { enum: ["adult", "teen"] }),
+  termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+  termsVersion: text("terms_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

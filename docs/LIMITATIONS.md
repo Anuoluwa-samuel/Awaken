@@ -42,7 +42,10 @@ secrets. Specifically:
   domain, so the Terms and Privacy Policy say "contact Ayomide Ogunyemi" without an address.
   Account deletion is self-serve and needs no contact, but data-copy requests do.
 - **No data export button.** Players can ask for a copy; there's no self-serve download yet.
-- **Age is self-declared.** The minimum is 13 (with parental permission under 18, per the Terms).
+- **Age is self-declared.** The minimum is 13; 13–17s tick that a parent or guardian agreed. Nothing
+  verifies either, and an under-13 can change their answer and retry (no cookie remembers it).
+- **Accounts created before sign-up consent** (migration 0007) have null `age_group` and
+  `terms_accepted_at`; they aren't asked again.
 
 ## Behaviour by design (documented, may surprise)
 

@@ -107,6 +107,8 @@ Delete the file when you're done if you don't want production secrets on disk.
   Vercel the IP comes from `x-vercel-forwarded-for`, which Vercel sets itself — clients can't spoof
   it. Off Vercel, set `AUTH_IP_HEADER` to the header your proxy **overwrites** (e.g. `x-real-ip`);
   with no usable header, all clients share one bucket.
+- **Sign-up consent:** sign-up requires an age range and Terms acceptance, stored on the user row
+  (migration `0007`).
 - **Account lockout:** 5 wrong passwords for one email pause sign-in for 10 min, doubling per
   repeat lock up to 24 h (`auth_lockout` table, migration `0006`). Unlock manually with
   `delete from auth_lockout where email = '<address>'`.
