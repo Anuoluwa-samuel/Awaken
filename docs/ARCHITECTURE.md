@@ -489,6 +489,13 @@ cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPT
 request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
 Only an age range is stored, never a date of birth.
 
+**Analytics** (`src/components/site-analytics.tsx`): Vercel Web Analytics (page views) and Speed
+Insights (Core Web Vitals), rendered only when `VERCEL` is set. Both are cookie-free with no
+session replay, and their scripts are served from our own origin (`/_vercel/…`), so the CSP is
+unchanged. `redactAnalyticsUrl` (`src/lib/web-analytics.ts`) runs in `beforeSend` for both: UUID
+path segments become `[id]` and every query parameter except `range` is dropped, so emails
+(`/verify-email?email=`), reset tokens and `?next=` targets never leave the browser.
+
 **Spam protection** (`src/lib/auth/spam-rules.ts`, before-hook on `/sign-up/email`): a honeypot
 field (`website`, off-screen, `tabindex=-1`, `aria-hidden`); a signed form token issued by the
 register page (HMAC with `BETTER_AUTH_SECRET`) that must be at least `SIGN_UP_MIN_SECONDS` (3)

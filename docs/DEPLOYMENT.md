@@ -124,6 +124,18 @@ Delete the file when you're done if you don't want production secrets on disk.
 - **Errors:** route-level and global error pages never show stack traces; production builds strip
   error messages and show a reference digest you can match in Vercel's logs.
 
+## Analytics
+
+The code is in place; Vercel only collects data once you switch it on:
+
+1. Vercel → your project → **Analytics** tab → **Enable** (Web Analytics).
+2. **Speed Insights** tab → **Enable**.
+3. Redeploy (Deployments → ⋯ → Redeploy), then browse the live site; data appears within minutes.
+
+Both are free on Hobby within monthly event limits, cookie-free (no consent banner needed) and
+record no session replays. Page addresses are scrubbed of emails, reset tokens and record ids
+before sending.
+
 ## Bot protection (optional, recommended once live)
 
 Sign-up already blocks scripts on its own: a hidden honeypot field, a signed form token that must be

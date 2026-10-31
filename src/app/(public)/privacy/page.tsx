@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <>
           AWAKEN is run by {LEGAL.operator}. This policy explains what we collect when you use AWAKEN, why, and the
           choices you have. The short version: we collect what the game needs to work, we don&apos;t sell it, and we
-          don&apos;t use advertising or tracking.
+          don&apos;t use advertising or cross-site tracking.
         </>
       }
     >
@@ -74,6 +74,15 @@ export default function PrivacyPage() {
         models.
       </p>
 
+      <h2>Site analytics</h2>
+      <p>
+        To see which pages are used and how fast they load, we use Vercel Web Analytics and Speed Insights. They
+        count page views and measure loading times without cookies, without recording what you type or how you
+        move around a page (no session replays), and without identifying you across other websites. Before anything
+        is sent, we strip personal details from page addresses: email addresses, password-reset links and the ids of
+        your quests, habits and goals. Visitors are counted using a short-lived hash that changes every day.
+      </p>
+
       <h2>Cookies and local storage</h2>
       <p>
         AWAKEN sets one essential cookie that keeps you signed in. It&apos;s removed when you sign out and expires
@@ -85,7 +94,8 @@ export default function PrivacyPage() {
       <p>We use a small number of providers to run AWAKEN. They handle your data only on our instructions:</p>
       <ul>
         <li>
-          <strong>Vercel</strong> hosts the app and keeps short-lived request logs.
+          <strong>Vercel</strong> hosts the app, keeps short-lived request logs and provides the cookie-free site
+          analytics described above.
         </li>
         <li>
           <strong>Neon</strong> hosts the database, in the United States.
