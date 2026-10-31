@@ -22,3 +22,11 @@ export async function newPlayerContext(browser: Browser, ip = freshIp()) {
 }
 
 export { expect } from "@playwright/test";
+
+// Throwaway local player in the *development* database (not the E2E one), used for manual
+// checks against `pnpm dev` on localhost only.
+export const TEST_PLAYER = {
+  name: "Test Hunter",
+  email: "hunter.one@awaken.test",
+  password: "Arise-local-dev-0001",
+};
