@@ -1,4 +1,4 @@
-export const PUBLIC_PAGES = ["/", "/login", "/register", "/forgot-password"];
+export const PUBLIC_PAGES = ["/", "/login", "/register", "/forgot-password", "/terms", "/privacy"];
 
 export const PLAYER_PAGES = [
   "/system",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DeleteAccount } from "@/components/player/delete-account";
 import { SettingsForm } from "@/components/player/settings-form";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { getPlayerContext } from "@/server/player-context";
@@ -30,6 +31,15 @@ export default async function SettingsPage() {
           <dt className="text-ink-faint">Email</dt>
           <dd>{user.email}</dd>
         </dl>
+      </Panel>
+      <Panel>
+        <PanelHeader eyebrow="Danger zone" title="Delete account" />
+        <div className="grid gap-4 p-5 sm:p-6">
+          <p className="text-sm text-ink-muted">
+            Permanently remove your account and everything in it. You&apos;ll be signed out on every device.
+          </p>
+          <DeleteAccount />
+        </div>
       </Panel>
     </div>
   );

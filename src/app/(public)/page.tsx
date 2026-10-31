@@ -1,6 +1,9 @@
 import { ArrowRight, Flame, ScrollText, Shield, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Wordmark } from "@/components/brand/logo";
+import { LegalFooter } from "@/components/legal/legal-page";
+import { AccountDeletedNotice } from "@/components/player/account-deleted-notice";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
@@ -29,6 +32,9 @@ export default function LandingPage() {
       </header>
 
       <main>
+        <Suspense>
+          <AccountDeletedNotice />
+        </Suspense>
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-20">
           <div className="animate-rise">
             <p className="font-display text-xs font-semibold uppercase tracking-[0.35em] text-glow">
@@ -96,9 +102,7 @@ export default function LandingPage() {
           </ul>
         </section>
       </main>
-      <footer className="border-t border-line py-6 text-center text-xs text-ink-faint">
-        AWAKEN is an original project. Attributes are game mechanics, not measurements of ability or health.
-      </footer>
+      <LegalFooter />
     </div>
   );
 }

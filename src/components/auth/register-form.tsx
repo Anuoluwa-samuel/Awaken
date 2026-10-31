@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -68,6 +69,17 @@ export function RegisterForm({ requireVerification }: { requireVerification: boo
           {...form.register("confirm")}
         />
       </Field>
+      <p className="text-xs text-ink-muted">
+        By creating an account, you agree to the{" "}
+        <Link href="/terms" target="_blank" className="text-glow hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" target="_blank" className="text-glow hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
       <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2">
         <Sparkles aria-hidden />
         {isSubmitting ? "Initializing…" : "Awaken"}

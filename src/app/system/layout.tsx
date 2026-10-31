@@ -45,6 +45,14 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
         <SidebarNav unread={summary.unreadNotifications} />
         <p className="mt-auto px-1 text-[11px] leading-relaxed text-ink-faint">
           Quest day {today} · {profile.timeZone.replaceAll("_", " ")}
+          <br />
+          <Link href="/terms" className="hover:text-ink">
+            Terms
+          </Link>{" "}
+          ·{" "}
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy
+          </Link>
         </p>
       </aside>
 

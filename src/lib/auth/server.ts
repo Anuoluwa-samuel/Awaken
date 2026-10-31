@@ -8,9 +8,11 @@ import * as schema from "@/db/schema";
 import { emailTransportAvailable, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
 import { describeWait, normaliseEmail } from "@/lib/auth/lockout-rules";
+import { purgeAccountExtras } from "@/server/services/account";
 import { clearLockout, recordFailure, reserveAttempt } from "@/server/services/lockout";
 
 const SIGN_IN = "/sign-in/email";
+const DELETE_USER = "/delete-user";
 
 function lockedError(retryAfterSeconds: number) {
   return new APIError(
@@ -68,6 +70,15 @@ export const auth = betterAuth({
       });
     },
   },
+  user: {
+    // Self-serve deletion from Settings. The before-hook below makes the password mandatory.
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await purgeAccountExtras(db, user.id, user.email);
+      },
+    },
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 14,
     updateAge: 60 * 60 * 24,
@@ -86,6 +97,7 @@ export const auth = betterAuth({
       "/request-password-reset": { window: 300, max: 3 },
       "/reset-password": { window: 300, max: 5 },
       "/send-verification-email": { window: 300, max: 3 },
+      [DELETE_USER]: { window: 600, max: 5 },
     },
   },
   advanced: {
@@ -103,6 +115,15 @@ export const auth = betterAuth({
   // Per-account lockout (src/server/services/lockout.ts, docs/ARCHITECTURE.md §6g).
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === DELETE_USER) {
+        // Better Auth would otherwise accept a recent session alone, or an emailed token.
+        const body = ctx.body as { password?: unknown; token?: unknown } | undefined;
+        if (typeof body?.password !== "string" || body.password.length === 0 || body.token !== undefined) {
+          throw new APIError("BAD_REQUEST", { code: "PASSWORD_REQUIRED", message: "Enter your password to delete your account." });
+        }
+        return;
+      }
+      if (ctx.path === "/delete-user/callback") throw new APIError("NOT_FOUND");
       if (ctx.path !== SIGN_IN) return;
       const email = normaliseEmail((ctx.body as { email?: unknown } | undefined)?.email);
       if (!email) return;

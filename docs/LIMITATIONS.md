@@ -36,6 +36,14 @@ secrets. Specifically:
 - `auth_lockout` keeps a row per attempted email; `pruneLockouts()` exists for housekeeping but no
   scheduled job runs it yet.
 
+## Legal & privacy
+
+- **No contact email yet.** `LEGAL.contactEmail` in `src/lib/legal.ts` is empty until there's a
+  domain, so the Terms and Privacy Policy say "contact Ayomide Ogunyemi" without an address.
+  Account deletion is self-serve and needs no contact, but data-copy requests do.
+- **No data export button.** Players can ask for a copy; there's no self-serve download yet.
+- **Age is self-declared.** The minimum is 13 (with parental permission under 18, per the Terms).
+
 ## Behaviour by design (documented, may surprise)
 
 - **Quests are generated lazily** when the player opens the app (no background job). Days the player

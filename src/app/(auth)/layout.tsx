@@ -10,6 +10,14 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         </Link>
       </header>
       <main className="w-full max-w-md animate-rise">{children}</main>
+      <nav aria-label="Legal" className="mt-8 flex gap-4 text-xs text-ink-faint">
+        <Link href="/terms" className="hover:text-ink">
+          Terms
+        </Link>
+        <Link href="/privacy" className="hover:text-ink">
+          Privacy
+        </Link>
+      </nav>
     </div>
   );
 }

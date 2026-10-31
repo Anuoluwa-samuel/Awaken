@@ -465,6 +465,24 @@ The sign-in form shows a live countdown, disables submit until it ends, and link
 reset (which unlocks immediately). Note: without an email provider, reset isn't available, so a
 locked player waits out the timer.
 
+## 6h. Account deletion & legal pages
+
+**Deletion** is self-serve under *Settings → Danger zone*. It uses Better Auth's `/delete-user`
+endpoint with two guards added in `src/lib/auth/server.ts`: the password is **always** required
+(Better Auth would otherwise accept a recent session alone), and the emailed-token route is
+disabled. The endpoint is rate limited to 5 tries per 10 minutes per IP. The UI also asks the
+player to type `DELETE`.
+
+What goes: every game table references `user.id` with `ON DELETE CASCADE`, so deleting the user
+row removes sessions, credentials, profile, quests, ledgers, achievements, notifications and so on
+in one statement. `purgeAccountExtras` (`src/server/services/account.ts`, the `beforeDelete` hook)
+removes the rest: audit events the player triggered, pending reset tokens, and the lockout record
+for their email. An integration test checks every table that has a user column afterwards.
+
+**Legal pages:** `/terms` and `/privacy` are generated from `src/lib/legal.ts` (operator, contact
+email, governing law, minimum age, last-updated date). Keep the Privacy Policy in step with what
+the schema stores; if a feature starts collecting something new, update both.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
