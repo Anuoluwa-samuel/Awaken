@@ -31,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/system/goals", label: "Goals", icon: Flag },
   { href: "/system/skills", label: "Skills", icon: GitBranch },
   { href: "/system/achievements", label: "Achievements", icon: Award },
-  { href: "/system/progress", label: "Progress", icon: Activity, lockedUntil: 9 },
+  { href: "/system/progress", label: "Progress", icon: Activity },
   { href: "/system/notifications", label: "Notifications", icon: Bell, mobile: true },
   { href: "/system/settings", label: "Settings", icon: Settings },
 ];

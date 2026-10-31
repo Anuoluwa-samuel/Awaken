@@ -106,7 +106,7 @@ describe("grantXp", () => {
     const events = await db.query.levelEvent.findMany({ where: eq(levelEvent.userId, userId) });
     expect(events).toMatchObject([{ fromLevel: 1, toLevel: 10, fromRank: "E", toRank: "D" }]);
     const notes = await db.query.notification.findMany({ where: eq(notification.userId, userId) });
-    expect(notes.map((n) => n.type).sort()).toEqual(["level_up", "rank_up"]);
+    expect(notes.map((n) => n.type).filter((t) => t === "level_up" || t === "rank_up").sort()).toEqual(["level_up", "rank_up"]);
   });
 
   it("applies the daily quest cap, records the capped grant, and explains it", async () => {

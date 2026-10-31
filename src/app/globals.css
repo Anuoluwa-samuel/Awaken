@@ -43,6 +43,18 @@
 
 :root {
   color-scheme: dark;
+  /* Chart series — categorical slots validated (CVD ΔE ≥ 8.4, ≥ 3:1) on --color-panel.
+     Assign in this order; never cycle. Declared on :root (not @theme) because they are
+     only referenced from chart props, and Tailwind drops unused theme variables. */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+  --color-series-4: #c98500;
+  --color-series-5: #d55181;
+  /* De-emphasis (not a status colour): "missed" / remainder segments. */
+  --color-series-muted: #3b4763;
+  --color-chart-grid: #1a2640;
+
 }
 
 html {

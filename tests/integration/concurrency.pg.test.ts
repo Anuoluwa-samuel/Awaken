@@ -96,6 +96,10 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     const quests = await listQuestsForDay(db, userId, "2026-10-28");
     expect(quests.length).toBeGreaterThan(0);
     expect(new Set(quests.map((q) => q.templateId)).size).toBe(quests.length);
+    const daily = (await db.query.notification.findMany({ where: eq(notification.userId, userId) })).filter(
+      (n) => n.dedupeKey === `daily:${userId}:2026-10-28`,
+    );
+    expect(daily).toHaveLength(1);
   });
 
   it("completes a quest once when 20 completion requests race", async () => {

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { db } from "@/db";
 import { requirePlayer } from "@/lib/auth/session";
 import { evaluateAchievements } from "./services/achievements";
+import { ensureDeadlineNotifications } from "./services/notifications";
 import { ensureDailyQuests } from "./services/quests";
 import { ensureWeeklyChallenges } from "./services/weekly";
 
@@ -17,5 +18,6 @@ export const getPlayerContext = cache(async () => {
   const week = await ensureWeeklyChallenges(db, user.id, now);
   // Catch up on achievements earned before they existed or outside a reward flow (idempotent).
   await db.transaction((tx) => evaluateAchievements(tx, user.id, now));
+  await ensureDeadlineNotifications(db, user.id, today, now);
   return { user, profile, today, week };
 });

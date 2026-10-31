@@ -24,6 +24,7 @@ import { dayOfWeek, questDay, questDayBounds, type QuestDate } from "@/lib/time"
 import type { CustomQuestInput } from "@/lib/validation/quest";
 import { evaluateAchievements, type UnlockedAchievement } from "./achievements";
 import { recordMilestonesForQuest, type GoalCompletion } from "./goal-links";
+import { notify } from "./notifications";
 import { recordLinkedHabitCheckIns } from "./habit-links";
 import { grantAttribute, grantXp, lockProgress } from "./rewards";
 import { advanceWeeklyChallenges, type WeeklyAdvance } from "./weekly";
@@ -109,7 +110,7 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
       );
 
     if (scheduled.length > 0) {
-      await tx
+      const inserted = await tx
         .insert(playerQuest)
         .values(
           scheduled.map(({ template: t }) => ({
@@ -130,7 +131,19 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
         )
         .onConflictDoNothing({
           target: [playerQuest.userId, playerQuest.templateId, playerQuest.questDate],
+        })
+        .returning({ id: playerQuest.id });
+      if (inserted.length > 0) {
+        await notify(tx, {
+          userId,
+          type: "daily",
+          title: "Daily quests available",
+          body: `${scheduled.length} quest${scheduled.length === 1 ? "" : "s"} for ${today}.`,
+          href: "/system/quests",
+          dedupeKey: `daily:${userId}:${today}`,
+          createdAt: now,
         });
+      }
     }
 
     return today;

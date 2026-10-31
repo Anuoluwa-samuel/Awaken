@@ -189,3 +189,32 @@ export function weekdayInsights(s: HabitSchedule, calendar: HeatCell[][]): { day
   const best = [...days].filter((d) => d.done > 0).sort((a, b) => score(b) - score(a) || b.done - a.done)[0];
   return { days, strongest: best?.label ?? null };
 }
+
+/**
+ * Completion rate inside a date window (progress page). Days before the habit started and an
+ * unfinished today are excluded. Weekly habits compare check-ins with the target pro-rated
+ * to the window's length.
+ */
+export function habitRateInRange(
+  s: HabitSchedule,
+  completions: Iterable<QuestDate>,
+  startDate: QuestDate,
+  from: QuestDate,
+  to: QuestDate,
+  today: QuestDate,
+): { done: number; due: number; rate: number | null } {
+  const done = new Set(completions);
+  const first = from > startDate ? from : startDate;
+  let due = 0;
+  let hit = 0;
+  let days = 0;
+  for (let d = first; d <= to; d = addDays(d, 1)) {
+    if (d === today && !done.has(d)) continue;
+    days++;
+    if (done.has(d)) hit++;
+    if (s.kind === "days" && s.days.includes(dayOfWeek(d))) due++;
+  }
+  if (s.kind === "weekly") due = Math.ceil((s.timesPerWeek * days) / 7);
+  const counted = s.kind === "days" ? [...done].filter((d) => d >= first && d <= to && s.days.includes(dayOfWeek(d))).length : hit;
+  return { done: Math.min(counted, due || counted), due, rate: due ? Math.min(1, counted / due) : null };
+}

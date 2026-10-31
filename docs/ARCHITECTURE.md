@@ -395,6 +395,48 @@ completes and may earn:
 in parallel exactly one transaction completes the goal (verified with real-Postgres races mixing
 milestone, quest and focus completions).
 
+## 6f. Progress analytics & notifications (Phase 9)
+
+**Analytics** (`/system/progress`, `src/server/services/analytics.ts`). Ranges: 7 / 30 / 90 days
+and 1 year (links, so every view is shareable and works without JavaScript). All figures come from
+persisted records, bucketed by the player's quest day in their own time zone:
+
+| Metric | Source |
+|---|---|
+| XP over time | `xp_ledger` (zero-filled per day; weekly buckets past 60 days) |
+| Quests completed / by category | `quest_completion` ⨝ `player_quest` |
+| Daily quest rate | scheduled `player_quest` outcomes: completed ÷ (completed + expired + cancelled); today's open quests count as neither |
+| Attribute progression | `attribute_ledger`, cumulative from the pre-range total |
+| Focus time | `focus_session.credited_seconds` (incl. sessions ended early) |
+| Habit rates & streaks | `habit_completion` with the habit's schedule (archived habits keep their history) |
+| Goals, achievements | `goal.completed_at`, `player_achievement.unlocked_at` |
+| Day streak | distinct completion days |
+
+Historical meaning of edge cases: cancelled and expired quests stay as "missed" on their day;
+quests are never edited after creation (rewards are snapshotted), so history can't shift;
+deleting/archiving keeps records. Days the player never opened the app generated no quests, so they
+can't count as missed — consistent with "missing a day never punishes".
+
+Charts (Recharts) follow the dataviz rules: one y-axis per chart, fixed categorical slot order
+(validated on the dark panel surface: worst adjacent CVD ΔE 8.4, all ≥ 3:1), a neutral grey for
+"missed" rather than a status colour, legends for ≥ 2 series, hover tooltips, a *Show table* view
+under every chart, and no grow-in animation for reduced-motion users.
+
+Implementation note: the quest-day expression is parameterised (time zone, start hour), so
+`GROUP BY` uses column position — repeating the expression binds new parameters, which Postgres
+rejects as a different expression.
+
+**Notifications** (`src/server/services/notifications.ts`). Types: level-up, rank-up,
+achievement, weekly challenge, goal completed, *daily quests available* (once per quest day,
+when that day's set is first generated) and *deadline* reminders — goals due within 2 days, one-off
+quests and unfinished weekly challenges ending within 24 hours — generated lazily per request.
+Every row has a unique dedupe key (`daily:{user}:{day}`, `deadline:goal:{id}:{deadline}`, …),
+so nothing duplicates under refreshes or parallel requests. Read state: opening a notification
+marks it read; *Mark all read*; both are scoped to the owner. The header bell shows the latest six
+and the unread count; the page paginates by creation time. Individual quest completions are shown
+inline rather than as notifications. Browser/email delivery is not implemented, and AWAKEN never
+asks for browser notification permission.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`
@@ -474,6 +516,6 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 6 — Habits (day / weekly schedules, rest days), streaks, rates, heatmap, quest links with single-reward rule, mobile menu
 - [x] Phase 7 — Achievement engine + catch-up, titles, skill tree with real effects, unlock messages, races tested
 - [x] Phase 8 — Server-timed focus sessions with recovery, pauses, breaks, quest links; goals with milestones, quest links, guarded rewards
-- [ ] Phase 9 — Analytics, notifications
+- [x] Phase 9 — Progress analytics with range filters, charts + tables; notifications with read state, daily and deadline reminders, header panel
 - [ ] Phase 10 — QA, Playwright E2E, accessibility pass
 - [ ] Phase 11 — Deployment docs

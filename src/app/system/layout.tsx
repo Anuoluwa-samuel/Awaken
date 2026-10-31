@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/logo";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CompletionProvider } from "@/components/quests/completion-provider";
 import { MobileNav, SidebarNav } from "@/components/shell/nav-links";
 import { PlayerSummary } from "@/components/shell/player-summary";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
 import { getPlayerContext } from "@/server/player-context";
 import { getShellSummary } from "@/server/services/dashboard";
+import { listNotifications } from "@/server/services/notifications";
 
 function initials(name: string) {
   return name
@@ -20,7 +22,10 @@ function initials(name: string) {
 
 export default async function SystemLayout({ children }: LayoutProps<"/system">) {
   const { user, profile, today } = await getPlayerContext();
-  const summary = await getShellSummary(db, user.id, today);
+  const [summary, latest] = await Promise.all([
+    getShellSummary(db, user.id, today),
+    listNotifications(db, user.id, { limit: 6 }),
+  ]);
 
   return (
     <CompletionProvider>
@@ -61,6 +66,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
               <span className="font-mono text-ink">{summary.questsOpen}</span>
               <span className="sr-only">open today</span>
             </Link>
+            <NotificationBell latest={latest.items} unread={summary.unreadNotifications} />
             <ProfileMenu name={profile.displayName} initials={initials(profile.displayName) || "P"} />
           </div>
         </header>
