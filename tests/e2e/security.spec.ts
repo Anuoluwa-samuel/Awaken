@@ -91,3 +91,12 @@ test("sign-ups are limited to 5 an hour per client, not globally", async ({ brow
   // Another client is unaffected.
   expect(await tryRegister("198.51.100.8")).toBe("registered");
 });
+
+test("responses don't advertise the framework or a server version", async ({ request }) => {
+  for (const path of ["/", "/login", "/api/health", "/no-such-page", "/sitemap.xml"]) {
+    const headers = (await request.get(path)).headers();
+    expect(headers["x-powered-by"], path).toBeUndefined();
+    // Hosting may name itself (Vercel sends "Server: Vercel"), but never with a version number.
+    expect(headers["server"] ?? "", path).not.toMatch(/\d/);
+  }
+});
