@@ -20,8 +20,9 @@ export async function dismissIntro(page: Page) {
 }
 
 export async function visit(page: Page, path: string) {
-  await page.goto(path);
+  const response = await page.goto(path);
   await dismissIntro(page);
+  return response;
 }
 
 export const AREAS = {
