@@ -102,11 +102,14 @@ Delete the file when you're done if you don't want production secrets on disk.
 
 ## How production-specific behaviour is wired
 
-- **Rate limiting** (sign-up 3/min, sign-in 5/min, password-reset 3/5 min, …) is keyed by client IP
+- **Rate limiting** (sign-up 3/min, sign-in 10/min, password-reset 3/5 min, …) is keyed by client IP
   and stored in Postgres (`rate_limit` table) so every function instance shares the counters. On
   Vercel the IP comes from `x-vercel-forwarded-for`, which Vercel sets itself — clients can't spoof
   it. Off Vercel, set `AUTH_IP_HEADER` to the header your proxy **overwrites** (e.g. `x-real-ip`);
   with no usable header, all clients share one bucket.
+- **Account lockout:** 5 wrong passwords for one email pause sign-in for 10 min, doubling per
+  repeat lock up to 24 h (`auth_lockout` table, migration `0006`). Unlock manually with
+  `delete from auth_lockout where email = '<address>'`.
 - **Email:** `src/lib/email.ts` uses Resend when `RESEND_API_KEY` is set and refuses to start in
   production with `REQUIRE_EMAIL_VERIFICATION=true` but no key. Provider errors are logged with the
   HTTP status only.

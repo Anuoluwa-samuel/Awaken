@@ -437,6 +437,34 @@ and the unread count; the page paginates by creation time. Individual quest comp
 inline rather than as notifications. Browser/email delivery is not implemented, and AWAKEN never
 asks for browser notification permission.
 
+## 6g. Account lockout
+
+Per-account protection against password guessing, on top of the per-IP rate limits
+(`src/lib/auth/lockout-rules.ts`, `src/server/services/lockout.ts`, hooks in
+`src/lib/auth/server.ts`).
+
+| Rule | Value |
+|---|---|
+| Wrong passwords before a lock | 5 |
+| Lock durations | 10 min, then 20, 40, 80 … doubling per consecutive lock, capped at 24 h |
+| After a lock expires | a fresh 5 attempts; the next lock is longer |
+| Reset | a successful sign-in or a password reset clears attempts, level and any active lock |
+| Decay | no attempts for 24 h resets the escalation level |
+| Key | normalised email (`auth_lockout.email`) — addresses without an account lock identically, so the lock reveals nothing about who is registered |
+
+Flow: a Better Auth **before** hook on `/sign-in/email` reserves the attempt under a row lock
+*before* the password is checked; while locked it answers `403 ACCOUNT_LOCKED` with
+`retryAfterSeconds` and a `Retry-After` header, even for the correct password. The **after** hook
+records a 401 as a failure (the 5th locks immediately) and clears the record on success.
+`onPasswordReset` clears it too. Counting before verification makes it race-proof: 20 parallel
+guesses let exactly 5 through (real-Postgres test). The account owner gets one in-app notification
+per lock. The per-IP sign-in limit is 10/min so the lockout message, not a generic 429, is what a
+person sees on their 6th try.
+
+The sign-in form shows a live countdown, disables submit until it ends, and links to password
+reset (which unlocks immediately). Note: without an email provider, reset isn't available, so a
+locked player waits out the timer.
+
 ## 7. Reward ledger & duplicate prevention
 
 All XP and attribute writes go through `src/server/services/rewards.ts`

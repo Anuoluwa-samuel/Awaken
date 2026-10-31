@@ -27,6 +27,15 @@ secrets. Specifically:
 - **Not done here:** the actual account creation and first deploy, custom-domain DNS, and an
   uptime monitor on `/api/health`.
 
+## Account lockout
+
+- Five wrong passwords lock sign-in for an email for 10 minutes, doubling per consecutive lock (max
+  24 h). Anyone who knows a player's email can deliberately keep them locked out (the classic
+  trade-off of account lockout); password reset unlocks immediately once email is configured.
+  An admin unlock tool doesn't exist yet — clear the `auth_lockout` row to unlock manually.
+- `auth_lockout` keeps a row per attempted email; `pruneLockouts()` exists for housekeeping but no
+  scheduled job runs it yet.
+
 ## Behaviour by design (documented, may surprise)
 
 - **Quests are generated lazily** when the player opens the app (no background job). Days the player

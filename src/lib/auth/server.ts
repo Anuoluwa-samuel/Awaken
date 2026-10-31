@@ -1,11 +1,28 @@
 import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { emailTransportAvailable, sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
+import { describeWait, normaliseEmail } from "@/lib/auth/lockout-rules";
+import { clearLockout, recordFailure, reserveAttempt } from "@/server/services/lockout";
+
+const SIGN_IN = "/sign-in/email";
+
+function lockedError(retryAfterSeconds: number) {
+  return new APIError(
+    "FORBIDDEN",
+    {
+      code: "ACCOUNT_LOCKED",
+      message: `Too many wrong passwords. Sign-in is paused for ${describeWait(retryAfterSeconds)}.`,
+      retryAfterSeconds,
+    },
+    { "Retry-After": String(retryAfterSeconds) },
+  );
+}
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -26,6 +43,11 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     requireEmailVerification: env.REQUIRE_EMAIL_VERIFICATION,
     revokeSessionsOnPasswordReset: true,
+    // A successful reset proves control of the email, so it lifts any sign-in lockout.
+    onPasswordReset: async ({ user }) => {
+      const email = normaliseEmail(user.email);
+      if (email) await clearLockout(db, email);
+    },
     resetPasswordTokenExpiresIn: 60 * 30,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
@@ -58,7 +80,8 @@ export const auth = betterAuth({
     window: 60,
     max: 100,
     customRules: {
-      "/sign-in/email": { window: 60, max: 5 },
+      // Per-IP; per-account guessing is handled by the lockout (5 wrong → locked).
+      "/sign-in/email": { window: 60, max: 10 },
       "/sign-up/email": { window: 60, max: 3 },
       "/request-password-reset": { window: 300, max: 3 },
       "/reset-password": { window: 300, max: 5 },
@@ -76,6 +99,29 @@ export const auth = betterAuth({
         : [process.env.AUTH_IP_HEADER || "x-forwarded-for"],
     },
     database: { generateId: () => crypto.randomUUID() },
+  },
+  // Per-account lockout (src/server/services/lockout.ts, docs/ARCHITECTURE.md §6g).
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== SIGN_IN) return;
+      const email = normaliseEmail((ctx.body as { email?: unknown } | undefined)?.email);
+      if (!email) return;
+      const decision = await reserveAttempt(db, email);
+      if (!decision.allowed) throw lockedError(decision.retryAfterSeconds);
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== SIGN_IN) return;
+      const email = normaliseEmail((ctx.body as { email?: unknown } | undefined)?.email);
+      if (!email) return;
+      const result = ctx.context.returned;
+      if (isAPIError(result)) {
+        if (result.statusCode !== 401) return; // only wrong credentials count as failures
+        const locked = await recordFailure(db, email);
+        if (locked && !locked.allowed) throw lockedError(locked.retryAfterSeconds);
+        return;
+      }
+      await clearLockout(db, email);
+    }),
   },
   // Must be last: lets server actions set auth cookies.
   plugins: [nextCookies()],

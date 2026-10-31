@@ -72,3 +72,17 @@ export const rateLimit = pgTable("rate_limit", {
   count: integer("count").notNull(),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
+
+/**
+ * Per-account sign-in lockout (src/server/services/lockout.ts). Keyed by normalised email, so
+ * addresses without an account behave identically and the lock can't reveal who is registered.
+ */
+export const authLockout = pgTable("auth_lockout", {
+  email: text("email").primaryKey(),
+  /** Attempts counted since the last success or lock. Counted *before* the password is checked. */
+  attempts: integer("attempts").notNull().default(0),
+  /** How many locks in a row; each one doubles the duration. */
+  level: integer("level").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+});

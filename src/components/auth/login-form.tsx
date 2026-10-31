@@ -3,18 +3,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
+import { LockoutCountdown } from "./lockout-countdown";
 import { loginSchema } from "@/lib/validation/auth";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // Seconds left on an account lockout (null = not locked); `lockKey` restarts the countdown.
+  const [lockedFor, setLockedFor] = useState<number | null>(null);
+  const [lockKey, setLockKey] = useState(0);
+  const unlock = useCallback(() => setLockedFor(null), []);
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -24,6 +29,11 @@ export function LoginForm({ next }: { next: string }) {
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
     const { error } = await authClient.signIn.email(values);
+    if (error?.code === "ACCOUNT_LOCKED") {
+      setLockedFor(Number((error as { retryAfterSeconds?: unknown }).retryAfterSeconds) || 600);
+      setLockKey((k) => k + 1);
+      return;
+    }
     if (error) {
       setError(
         error.code === "EMAIL_NOT_VERIFIED"
@@ -40,7 +50,8 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-4">
-      {error ? <FormMessage tone="error">{error}</FormMessage> : null}
+      {lockedFor ? <LockoutCountdown key={lockKey} seconds={lockedFor} onDone={unlock} /> : null}
+      {error && !lockedFor ? <FormMessage tone="error">{error}</FormMessage> : null}
       <Field id="email" label="Email" error={errors.email?.message}>
         <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register("email")} />
       </Field>
@@ -53,7 +64,7 @@ export function LoginForm({ next }: { next: string }) {
           {...form.register("password")}
         />
       </Field>
-      <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2">
+      <Button type="submit" size="lg" disabled={isSubmitting || !!lockedFor} className="mt-2">
         <LogIn aria-hidden />
         {isSubmitting ? "Connecting…" : "Enter the System"}
       </Button>

@@ -280,4 +280,12 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
       expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
     }
   });
+
+  it("lets at most 5 of 20 parallel guesses reach the password check", async () => {
+    const { reserveAttempt, lockoutStatus } = await import("@/server/services/lockout");
+    const email = `race-${crypto.randomUUID()}@awaken.test`;
+    const results = await Promise.all(Array.from({ length: 20 }, () => reserveAttempt(db, email, NOON)));
+    expect(results.filter((r) => r.allowed)).toHaveLength(5);
+    expect(await lockoutStatus(db, email, NOON)).toMatchObject({ locked: true, retryAfterSeconds: 600 });
+  });
 });
