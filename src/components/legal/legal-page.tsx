@@ -28,6 +28,9 @@ export function LegalFooter({ className = "" }: { className?: string }) {
   return (
     <footer className={`border-t border-line py-6 text-center text-xs text-ink-faint ${className}`}>
       <nav aria-label="Legal" className="flex justify-center gap-4">
+        <Link href="/guide" className="hover:text-ink">
+          Guide
+        </Link>
         <Link href="/terms" className="hover:text-ink">
           Terms
         </Link>

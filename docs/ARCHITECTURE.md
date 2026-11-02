@@ -517,6 +517,11 @@ always match the deployed URL. Generated assets: `opengraph-image.tsx` (1200×63
 all draw the logo from `icon.svg` with `next/og`. `robots.ts` disallows `/system`, `/onboarding`,
 `/api/` and points at `sitemap.ts`.
 
+**Player guide:** `/guide` is a public page whose numbers (XP, limits, ranks, skills, achievements)
+are read from the game config and seed data, so it can't drift from the rules; the wording still
+needs updating if behaviour changes. `pnpm guide:pdf [site-url] [output]` saves it as a PDF using the
+page's print styles.
+
 **Legal pages:** `/terms` and `/privacy` are generated from `src/lib/legal.ts` (operator, contact
 email, governing law, minimum age, last-updated date). Keep the Privacy Policy in step with what
 the schema stores; if a feature starts collecting something new, update both.

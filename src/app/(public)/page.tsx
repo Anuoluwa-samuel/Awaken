@@ -34,6 +34,9 @@ export default function LandingPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Wordmark />
         <nav className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+            <Link href="/guide">Guide</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Sign in</Link>
           </Button>

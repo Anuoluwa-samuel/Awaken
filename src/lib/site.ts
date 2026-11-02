@@ -14,7 +14,7 @@ const SHARE_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt: `$
 export const siteUrl = new URL(env.BETTER_AUTH_URL);
 
 /** Pages that search engines may index. The sitemap lists exactly these. */
-export const PUBLIC_ROUTES = ["/", "/register", "/login", "/terms", "/privacy"] as const;
+export const PUBLIC_ROUTES = ["/", "/guide", "/register", "/login", "/terms", "/privacy"] as const;
 
 /** Metadata for a public page: title, description, canonical URL and matching social tags. */
 export function pageMetadata({ title, description, path }: { title?: string; description: string; path: string }) {

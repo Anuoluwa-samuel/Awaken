@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx src/db/check-consistency.ts",
     "db:deploy": "drizzle-kit migrate && tsx src/db/seed.ts",
-    "deploy:check": "tsx scripts/deploy-check.mts"
+    "deploy:check": "tsx scripts/deploy-check.mts",
+    "guide:pdf": "tsx scripts/guide-pdf.mts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

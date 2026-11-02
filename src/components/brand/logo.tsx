@@ -59,7 +59,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />
-      <span className="font-brand text-lg font-extrabold tracking-[0.24em] text-[#f1f4fb]">AWAKEN</span>
+      <span className="font-brand text-lg font-extrabold tracking-[0.24em] text-[#f1f4fb] print:text-ink">AWAKEN</span>
     </span>
   );
 }

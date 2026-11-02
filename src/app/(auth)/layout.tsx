@@ -11,6 +11,9 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       </header>
       <main className="w-full max-w-md animate-rise">{children}</main>
       <nav aria-label="Legal" className="mt-8 flex gap-4 text-xs text-ink-faint">
+        <Link href="/guide" className="hover:text-ink">
+          Guide
+        </Link>
         <Link href="/terms" className="hover:text-ink">
           Terms
         </Link>

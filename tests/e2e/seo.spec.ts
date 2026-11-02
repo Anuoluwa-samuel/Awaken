@@ -3,7 +3,7 @@ import { PUBLIC_PAGES } from "./pages";
 import { registerPlayer, visit } from "./support";
 
 const ORIGIN = "http://localhost:3200";
-const INDEXED = ["/", "/register", "/login", "/terms", "/privacy"];
+const INDEXED = ["/", "/guide", "/register", "/login", "/terms", "/privacy"];
 
 test("public pages have a title, description, canonical URL and share image", async ({ page, request }) => {
   const titles = new Set<string>();

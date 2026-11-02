@@ -2,6 +2,7 @@ import {
   Activity,
   Award,
   Bell,
+  BookOpen,
   Flag,
   GitBranch,
   LayoutDashboard,
@@ -34,4 +35,5 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/system/progress", label: "Progress", icon: Activity },
   { href: "/system/notifications", label: "Notifications", icon: Bell, mobile: true },
   { href: "/system/settings", label: "Settings", icon: Settings },
+  { href: "/guide", label: "Guide", icon: BookOpen },
 ];
