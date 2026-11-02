@@ -36,6 +36,12 @@ secrets. Specifically:
 - `auth_lockout` keeps a row per attempted email; `pruneLockouts()` exists for housekeeping but no
   scheduled job runs it yet.
 
+## Backups
+
+- **Nothing is backed up until you finish [BACKUPS.md](BACKUPS.md)** (a second database and three GitHub secrets).
+  The nightly job has been tested on temporary databases, but not yet against Neon.
+- **The backup database can be up to a day behind.** Neon's instant restore covers the gap.
+
 ## Leaderboard fairness
 
 - **XP is self-reported and there's no daily XP limit,** so someone can claim activity they didn't do

@@ -17,7 +17,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx src/db/check-consistency.ts",
-    "db:deploy": "drizzle-kit migrate && tsx src/db/seed.ts",
+    "db:deploy": "CONFIRM_PRODUCTION_DB=yes drizzle-kit migrate && CONFIRM_PRODUCTION_DB=yes tsx src/db/seed.ts",
+    "db:temp": "tsx scripts/temp-db.mts",
     "deploy:check": "tsx scripts/deploy-check.mts",
     "guide:pdf": "tsx scripts/guide-pdf.mts",
     "admin:grant": "tsx src/db/grant-admin.ts"

@@ -2,11 +2,14 @@ import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { env } from "@/lib/env";
+import { assertLocalDatabase } from "./safety";
 import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as { pgClient?: ReturnType<typeof postgres> };
 
 function createClient() {
+  // `pnpm dev` and tests must never be able to reach a real database.
+  if (process.env.NODE_ENV !== "production") assertLocalDatabase(env.DATABASE_URL, "the app in development");
   const url = new URL(env.DATABASE_URL);
   // Neon's pooled endpoint (host contains "-pooler") runs PgBouncer in transaction mode,
   // which doesn't support named prepared statements.

@@ -4,6 +4,7 @@ import postgres from "postgres";
 import { checkProgressConsistency, rebuildProgress } from "@/server/services/consistency";
 import * as schema from "./schema";
 import type { AppDb } from "./types";
+import { assertDatabaseChangeAllowed } from "./safety";
 
 // Usage: pnpm db:check            (report only)
 //        pnpm db:check --repair   (rebuild caches from the ledgers, audited)
@@ -11,7 +12,9 @@ config({ path: ".env.local" });
 
 async function main() {
   const repair = process.argv.includes("--repair");
-  const client = postgres(process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!, { max: 1 });
+  const url = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!;
+  if (repair) assertDatabaseChangeAllowed(url, "db:check --repair");
+  const client = postgres(url, { max: 1 });
   const db = drizzle(client, { schema }) as unknown as AppDb;
   const players = await db.select({ userId: schema.playerProgress.userId }).from(schema.playerProgress);
   let bad = 0;

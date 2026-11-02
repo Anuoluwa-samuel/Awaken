@@ -111,7 +111,10 @@ export default function PrivacyPage() {
           analytics described above.
         </li>
         <li>
-          <strong>Neon</strong> hosts the database, in the United States.
+          <strong>Neon</strong> hosts the database and a separate backup copy, in the United States.
+        </li>
+        <li>
+          <strong>GitHub</strong> stores encrypted database backups for up to 30 days.
         </li>
         <li>
           <strong>Resend</strong> delivers account emails, when email is switched on.
@@ -125,8 +128,8 @@ export default function PrivacyPage() {
       <h2>How long we keep it</h2>
       <ul>
         <li>
-          Account and game data: until you delete your account. Deletion is immediate; copies in our database
-          provider&apos;s backups expire within their retention window.
+          Account and game data: until you delete your account. Deletion is immediate. Encrypted backups, kept only
+          to recover from data loss, are removed within 30 days.
         </li>
         <li>Sessions: until you sign out, or 14 days after you last used AWAKEN.</li>
         <li>Rate-limit counters: minutes. Wrong-password counts: cleared when you sign in or reset your password.</li>

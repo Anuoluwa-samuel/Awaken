@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import * as schema from "@/db/schema";
+import { assertLocalDatabase } from "@/db/safety";
 import { seedReferenceData } from "@/db/seed-reference";
 import type { AppDb } from "@/db/types";
 
@@ -16,6 +17,7 @@ config({ path: ".env.local", quiet: true });
 export async function createPgTestDb() {
   const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) return null;
+  assertLocalDatabase(url, "the concurrency tests");
   const admin = postgres(url, { max: 1, onnotice: () => {}, connect_timeout: 3 });
   try {
     await admin`select 1`;

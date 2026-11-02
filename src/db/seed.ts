@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { pathToFileURL } from "node:url";
 import postgres from "postgres";
+import { assertDatabaseChangeAllowed } from "./safety";
 import * as schema from "./schema";
 import { ACHIEVEMENTS, SKILLS, SYSTEM_QUEST_TEMPLATES } from "./seed-data";
 import { seedReferenceData } from "./seed-reference";
@@ -11,7 +12,9 @@ export { seedReferenceData };
 config({ path: ".env.local" });
 
 async function main() {
-  const client = postgres(process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!, { max: 1 });
+  const url = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL!;
+  assertDatabaseChangeAllowed(url, "db:seed");
+  const client = postgres(url, { max: 1 });
   await seedReferenceData(drizzle(client, { schema }));
   await client.end();
   console.log(

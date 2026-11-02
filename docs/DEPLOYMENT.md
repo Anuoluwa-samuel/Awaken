@@ -54,7 +54,7 @@ pnpm db:deploy
 
 `db:deploy` = `drizzle-kit migrate` (all files in `drizzle/`) + `db:seed` (quest templates, skills,
 achievements; idempotent upserts). Re-run it whenever a release adds a migration — **before**
-promoting that release. Unset the variables afterwards (`unset DATABASE_URL MIGRATION_DATABASE_URL`)
+promoting that release, and check last night's backup succeeded first. Unset the variables afterwards (`unset DATABASE_URL MIGRATION_DATABASE_URL`)
 so local commands don't hit production.
 
 ## 4. App — Vercel
@@ -135,6 +135,10 @@ pnpm admin:grant you@example.com
 
 Add `--revoke` to remove access. It takes effect on the next page load. Everyone else gets the normal
 "not found" page.
+
+## Backups
+
+Set these up before you have real players: see [BACKUPS.md](BACKUPS.md).
 
 ## Analytics
 

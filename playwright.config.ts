@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
+import { assertLocalDatabase } from "./src/db/safety";
 
 config({ path: ".env.local", quiet: true });
 
@@ -7,6 +8,8 @@ config({ path: ".env.local", quiet: true });
 // and their own dev server on port 3200 with a separate build dir, so they never touch
 // development data or the dev server on 3100.
 const base = new URL(process.env.DATABASE_URL ?? "postgres://awaken:awaken@localhost:54350/awaken");
+// The setup drops and recreates this database, so it must never be able to reach a real one.
+assertLocalDatabase(base.toString(), "the browser tests");
 base.pathname = "/awaken_e2e";
 export const E2E_DATABASE_URL = base.toString();
 export const E2E_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "e2e-secret-e2e-secret-e2e-secret-e2e";
