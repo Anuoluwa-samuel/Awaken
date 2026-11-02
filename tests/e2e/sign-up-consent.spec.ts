@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { issueFormToken } from "@/lib/auth/spam-rules";
+import { LEGAL } from "@/lib/legal";
 import { E2E_AUTH_SECRET } from "../../playwright.config";
 import { PASSWORD, sql, uniqueEmail, visit } from "./support";
 
@@ -34,7 +35,7 @@ test("sign-up asks a neutral age question and records consent", async ({ page })
 
   const [row] = await sql`select age_group, terms_accepted_at, terms_version from "user" where email = ${email}`;
   expect(row.age_group).toBe("teen");
-  expect(row.terms_version).toBe("2026-10-31");
+  expect(row.terms_version).toBe(LEGAL.updated);
   expect(Date.now() - new Date(row.terms_accepted_at).getTime()).toBeLessThan(60_000);
 });
 

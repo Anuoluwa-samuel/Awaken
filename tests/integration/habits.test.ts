@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { habitCompletion, playerProgress, xpLedger } from "@/db/schema";
 import type { AppDb } from "@/db/types";
-import { HABIT_RULES, LIMITS } from "@/lib/progression/config";
+import { HABIT_RULES } from "@/lib/progression/config";
 import type { HabitInput } from "@/lib/validation/habit";
 import { checkProgressConsistency } from "@/server/services/consistency";
 import {
@@ -101,15 +101,14 @@ describe("habit check-ins", () => {
     expect(await checkInHabit(db, userId, h.id, at("2026-11-02"))).toMatchObject({ counted: true });
   });
 
-  it("counts habit XP toward the daily cap", async () => {
+  it("still rewards habits after a big day: there's no daily XP limit", async () => {
     const userId = await newPlayer();
     await db.transaction((tx) =>
-      grantXp(tx, { userId, eventType: "quest_completed", sourceType: "test", amount: LIMITS.dailyQuestXpCap, reason: "fill", idempotencyKey: `${userId}:fill`, now: TUE }),
+      grantXp(tx, { userId, eventType: "quest_completed", sourceType: "test", amount: 5000, reason: "fill", idempotencyKey: `${userId}:fill`, now: TUE }),
     );
     const h = await createHabit(db, userId, input(), TUE);
     const r = await checkInHabit(db, userId, h.id, TUE);
-    expect(r).toMatchObject({ counted: true, xp: { granted: 0 } });
-    expect(r.status === "checked_in" && r.xp.note).toMatch(/limit/);
+    expect(r).toMatchObject({ counted: true, xp: { granted: HABIT_RULES.xp, note: null } });
   });
 
   it("isolates players and rejects archived habits", async () => {

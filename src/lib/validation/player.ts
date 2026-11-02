@@ -12,5 +12,5 @@ export const onboardingSchema = z.object({
 });
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 
-export const settingsSchema = onboardingSchema;
-export type SettingsInput = OnboardingInput;
+export const settingsSchema = onboardingSchema.extend({ showOnLeaderboard: z.boolean().optional() });
+export type SettingsInput = z.infer<typeof settingsSchema>;

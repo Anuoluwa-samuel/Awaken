@@ -36,6 +36,17 @@ secrets. Specifically:
 - `auth_lockout` keeps a row per attempted email; `pruneLockouts()` exists for housekeeping but no
   scheduled job runs it yet.
 
+## Leaderboard fairness
+
+- **XP is self-reported and there's no daily XP limit,** so someone can claim activity they didn't do
+  to climb. Custom quests still earn XP only 3 times per category per day and goals twice a day,
+  which holds that route to about 4,800 XP a day; removing those too would let anyone reach first
+  place instantly. There are no moderation tools yet to remove a cheater or an offensive display
+  name: set `show_on_leaderboard = false` on their `player_profile` row, or delete the account.
+- **Admin analytics** count from the database only; page views are in Vercel Analytics. The dashboard
+  recomputes on every load, which is fine at this size but would need caching with many thousands
+  of players.
+
 ## Spam protection
 
 - **BotID is off by default** (`NEXT_PUBLIC_BOTID_ENABLED`) until it's verified on a Vercel
@@ -91,7 +102,7 @@ secrets. Specifically:
 |---|---|
 | Unit | XP curve, ranks, rewards/caps, time zones & DST, quest states, streaks, habits, achievements, skills, focus timing, goals, analytics helpers, key components (RTL) |
 | Integration (PGlite) | every service: rewards, quests, custom quests, weekly, habits, achievements, skills, focus, goals, analytics, notifications, consistency/repair, isolation |
-| Concurrency (real Postgres) | duplicate grants, daily caps, custom limits, quest/habit/focus/goal/milestone races, skill unlocks, achievement evaluation, daily generation — needs Docker running, otherwise skipped |
+| Concurrency (real Postgres) | duplicate grants, custom limits, quest/habit/focus/goal/milestone races, skill unlocks, achievement evaluation, daily generation — needs Docker running, otherwise skipped |
 | End-to-end (Playwright, Chromium) | full first session, XP exactly once on double click, level-up at threshold, achievement, focus recovery after reload, progress figures vs. the ledger, sign-in redirects, open-redirect guard, sign-out, cross-player isolation, per-client sign-up rate limit |
 | Accessibility | axe (WCAG 2.1 A/AA) on 18 pages with zero serious/critical issues; skip link and visible focus; reduced motion honoured |
 | Responsive | no horizontal overflow on 18 pages at Pixel 7 size; every section reachable from the mobile menu |

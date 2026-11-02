@@ -266,7 +266,7 @@ export async function completeFocus(db: AppDb, userId: string, sessionId: string
       status: "completed",
       session,
       via: "focus",
-      xp: xp.status === "granted" ? { granted: xp.granted, note: xp.capReason } : { granted: 0, note: "Already rewarded." },
+      xp: xp.status === "granted" ? { granted: xp.granted, note: null } : { granted: 0, note: "Already rewarded." },
       attributes: attr.status === "granted" ? [{ attribute: "discipline", granted: attr.granted }] : [],
       levelChange: change.levelsGained > 0 ? change : null,
       achievements,

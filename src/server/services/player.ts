@@ -6,11 +6,12 @@ import {
   playerProgress,
   playerQuestSchedule,
   questTemplate,
+  user,
 } from "@/db/schema";
 import { SYSTEM_QUEST_TEMPLATES } from "@/db/seed-data";
 import type { AppDb } from "@/db/types";
 import { ATTRIBUTES, type Category } from "@/lib/progression/config";
-import type { OnboardingInput } from "@/lib/validation/player";
+import type { OnboardingInput, SettingsInput } from "@/lib/validation/player";
 import { ensureDailyQuests } from "./quests";
 import { ensureWeeklyChallenges } from "./weekly";
 
@@ -36,10 +37,13 @@ export function pickStarterTemplateKeys(focusAreas: Category[], dailyTarget: num
  */
 export async function createPlayer(db: AppDb, userId: string, input: OnboardingInput, now = new Date()) {
   const created = await db.transaction(async (tx) => {
+    // Under-18s stay off the public ranking unless they choose to join it.
+    const account = await tx.query.user.findFirst({ where: eq(user.id, userId), columns: { ageGroup: true } });
     const inserted = await tx
       .insert(playerProfile)
       .values({
         userId,
+        showOnLeaderboard: account?.ageGroup !== "teen",
         displayName: input.displayName,
         timeZone: input.timeZone,
         dayStartHour: input.dayStartHour,
@@ -101,7 +105,7 @@ export type UpdateSettingsResult =
 export async function updateSettings(
   db: AppDb,
   userId: string,
-  input: OnboardingInput,
+  input: SettingsInput,
   now = new Date(),
 ): Promise<UpdateSettingsResult> {
   return db.transaction(async (tx) => {
@@ -147,6 +151,7 @@ export async function updateSettings(
         focusAreas: input.focusAreas,
         preferredDifficulty: input.preferredDifficulty,
         dailyTarget: input.dailyTarget,
+        ...(input.showOnLeaderboard === undefined ? {} : { showOnLeaderboard: input.showOnLeaderboard }),
       })
       .where(eq(playerProfile.userId, userId));
     return { ok: true };

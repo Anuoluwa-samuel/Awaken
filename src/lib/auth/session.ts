@@ -1,7 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/db";
 import { playerProfile } from "@/db/schema";
@@ -17,6 +17,13 @@ export async function requireUser() {
   const session = await getSession();
   if (!session) redirect("/login");
   return session.user;
+}
+
+/** A signed-in admin. Everyone else gets "not found", so the area doesn't reveal itself. */
+export async function requireAdmin() {
+  const user = await requireUser();
+  if ((user as { role?: string }).role !== "admin") notFound();
+  return user;
 }
 
 /** A signed-in user who has a player profile. Redirects to onboarding otherwise. */

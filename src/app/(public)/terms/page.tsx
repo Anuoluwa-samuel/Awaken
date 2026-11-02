@@ -33,6 +33,10 @@ export default function TermsPage() {
         <li>Keep your password private. You&apos;re responsible for what happens under your account.</li>
         <li>One person, one account. Accounts can&apos;t be sold or transferred.</li>
         <li>
+          Your display name can be seen by other players on the leaderboard, so don&apos;t use one that&apos;s offensive
+          or impersonates someone else.
+        </li>
+        <li>
           If you think someone else has access to your account, change your password and <Contact /> right away.
         </li>
       </ul>
@@ -54,7 +58,7 @@ export default function TermsPage() {
           probe, scan or attack the service, get around its rate limits or sign-in protections, or interfere with how
           it runs;
         </li>
-        <li>use bots or scripts to create accounts or to generate rewards;</li>
+        <li>use bots or scripts to create accounts or to generate rewards, or log activity you didn&apos;t do to climb the leaderboard;</li>
         <li>copy, resell or reverse-engineer the service, except where the law allows it.</li>
       </ul>
 

@@ -12,6 +12,8 @@ export const user = pgTable("user", {
   ageGroup: text("age_group", { enum: ["adult", "teen"] }),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
   termsVersion: text("terms_version"),
+  // Set only by `pnpm admin:grant`. "admin" opens /admin; never settable from a request.
+  role: text("role", { enum: ["player", "admin"] }).notNull().default("player"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

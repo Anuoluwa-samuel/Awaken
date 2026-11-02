@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { LIMITS } from "@/lib/progression/config";
 import { xpToReach } from "@/lib/progression/levels";
 import {
-  applyDailyXpCap,
   applyXp,
   attributePointsFor,
   resolveQuestXp,
@@ -49,15 +47,6 @@ describe("applyXp", () => {
 });
 
 describe("caps", () => {
-  it("applies the daily quest XP cap", () => {
-    expect(applyDailyXpCap(25, 0)).toEqual({ granted: 25, capped: false, reason: null });
-    const partial = applyDailyXpCap(50, LIMITS.dailyQuestXpCap - 20);
-    expect(partial.granted).toBe(20);
-    expect(partial.capped).toBe(true);
-    expect(partial.reason).toMatch(/30 XP not awarded/);
-    expect(applyDailyXpCap(50, LIMITS.dailyQuestXpCap + 5).granted).toBe(0);
-  });
-
   it("applies the daily attribute cap", () => {
     expect(attributePointsFor("elite", 0)).toBe(5);
     expect(attributePointsFor("elite", 8)).toBe(2);

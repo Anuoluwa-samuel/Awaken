@@ -10,7 +10,7 @@ import {
 } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { LIMITS } from "@/lib/progression/config";
-import { xpToReach } from "@/lib/progression/levels";
+import { levelFromXp, xpToReach } from "@/lib/progression/levels";
 import { checkProgressConsistency, rebuildProgress } from "@/server/services/consistency";
 import { createPlayer } from "@/server/services/player";
 import { grantAttribute, grantXp, RewardError, type XpGrant } from "@/server/services/rewards";
@@ -62,7 +62,7 @@ describe("grantXp", () => {
   it("records a ledger entry and updates the cached totals", async () => {
     const userId = await newPlayer();
     const result = await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID())));
-    expect(result).toMatchObject({ status: "granted", requested: 25, granted: 25, capReason: null });
+    expect(result).toMatchObject({ status: "granted", requested: 25, granted: 25 });
     expect(await progressOf(userId)).toMatchObject({ totalXp: 25, level: 1, rank: "E" });
     expect(await db.query.xpLedger.findMany({ where: eq(xpLedger.userId, userId) })).toHaveLength(1);
   });
@@ -109,44 +109,17 @@ describe("grantXp", () => {
     expect(notes.map((n) => n.type).filter((t) => t === "level_up" || t === "rank_up").sort()).toEqual(["level_up", "rank_up"]);
   });
 
-  it("applies the daily quest cap, records the capped grant, and explains it", async () => {
+  it("has no daily limit: a huge day levels up fully and stays consistent", async () => {
     const userId = await newPlayer();
-    for (let i = 0; i < 3; i++) await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID(), 100)));
-    const partial = await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID(), 150)));
-    expect(partial).toMatchObject({ status: "granted", requested: 150, granted: 100 });
-    expect(partial.status === "granted" && partial.capReason).toMatch(/50 XP not awarded/);
-
-    const zero = await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID(), 25)));
-    expect(zero).toMatchObject({ status: "granted", granted: 0 });
-    expect((await progressOf(userId))?.totalXp).toBe(LIMITS.dailyQuestXpCap);
-
-    // Achievements are not capped.
-    await db.transaction((tx) =>
-      grantXp(tx, {
-        userId,
-        eventType: "achievement_unlocked",
-        sourceType: "achievement",
-        amount: 10,
-        reason: "First Blood",
-        idempotencyKey: `ach:${userId}:first-blood`,
-        now: NOON,
-      }),
-    );
-    expect((await progressOf(userId))?.totalXp).toBe(LIMITS.dailyQuestXpCap + 10);
-  });
-
-  it("resets the cap at the player's day boundary, not UTC midnight", async () => {
-    const userId = await newPlayer();
-    await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID(), 400)));
-    // 02:59 UTC on the 28th = 03:59 Lagos: still the 27th's quest day.
-    const before = await db.transaction((tx) =>
-      grantXp(tx, quest(userId, crypto.randomUUID(), 25, new Date("2026-10-28T02:59:00Z"))),
-    );
-    expect(before).toMatchObject({ granted: 0 });
-    const after = await db.transaction((tx) =>
-      grantXp(tx, quest(userId, crypto.randomUUID(), 25, new Date("2026-10-28T03:00:00Z"))),
-    );
-    expect(after).toMatchObject({ granted: 25 });
+    for (let i = 0; i < 20; i++) {
+      const result = await db.transaction((tx) => grantXp(tx, quest(userId, crypto.randomUUID(), 100)));
+      expect(result).toMatchObject({ status: "granted", requested: 100, granted: 100 });
+    }
+    const progress = await progressOf(userId);
+    expect(progress?.totalXp).toBe(2000);
+    expect(progress?.level).toBe(levelFromXp(2000));
+    expect(progress?.level).toBeGreaterThan(10);
+    expect((await checkProgressConsistency(db, userId)).ok).toBe(true);
   });
 
   it("rejects negative or fractional amounts", async () => {

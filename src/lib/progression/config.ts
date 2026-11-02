@@ -65,8 +65,6 @@ export const CUSTOM_XP_MAX_MULTIPLIER = 2;
 export const LEVEL_CURVE = { base: 100, increment: 20 } as const;
 
 export const LIMITS = {
-  /** Quest + focus XP per player day. Achievements and weekly challenges are not capped. */
-  dailyQuestXpCap: 400,
   /** Attribute points per attribute per player day. */
   dailyAttributeCap: 10,
   /** Rewarded custom-quest completions per category per player day. */

@@ -86,6 +86,13 @@ export function SettingsForm({ defaults }: { defaults: SettingsInput }) {
           ))}
         </div>
       </fieldset>
+      <label className="flex items-start gap-2 text-sm text-ink-muted">
+        <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-[#4f9dff]" {...form.register("showOnLeaderboard")} />
+        <span>
+          Show me on the global leaderboard. Other players see your display name, title, level, rank and XP, never your
+          email.
+        </span>
+      </label>
       <div className="flex justify-end">
         <Button type="submit" disabled={pending || !form.formState.isDirty}>
           {pending ? "Saving…" : "Save changes"}

@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { notification, playerProgress, questCompletion, user, weeklyChallenge, xpLedger } from "@/db/schema";
 import type { AppDb } from "@/db/types";
-import { LIMITS } from "@/lib/progression/config";
 import { checkProgressConsistency } from "@/server/services/consistency";
 import { createPlayer } from "@/server/services/player";
 import { completeQuest, createCustomQuest, ensureDailyQuests, listOpenOneOffQuests, listQuestsForDay } from "@/server/services/quests";
@@ -56,7 +55,7 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     expect(notes.filter((n) => n.type === "level_up")).toHaveLength(1);
   });
 
-  it("never exceeds the daily cap under parallel different grants", async () => {
+  it("counts every parallel grant, with no daily limit", async () => {
     const userId = await newPlayer();
     await Promise.all(
       Array.from({ length: 30 }, () =>
@@ -64,7 +63,7 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
       ),
     );
     const report = await checkProgressConsistency(db, userId);
-    expect(report.ledgerXp).toBe(LIMITS.dailyQuestXpCap);
+    expect(report.ledgerXp).toBe(30 * 25);
     expect(report.ok).toBe(true);
   });
 

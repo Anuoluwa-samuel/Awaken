@@ -242,7 +242,7 @@ export async function checkInHabit(db: AppDb, userId: string, habitId: string, n
       date: today,
       via: "habit",
       counted: true,
-      xp: xp.status === "granted" ? { granted: xp.granted, note: xp.capReason } : { granted: 0, note: "Already rewarded." },
+      xp: xp.status === "granted" ? { granted: xp.granted, note: null } : { granted: 0, note: "Already rewarded." },
       attributes: attr.status === "granted" ? [{ attribute: h.attribute, granted: attr.granted }] : [],
       levelChange: await levelChangeSince(tx, userId, before.totalXp),
       achievements,

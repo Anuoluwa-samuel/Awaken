@@ -81,6 +81,7 @@ export const auth = betterAuth({
       ageGroup: { type: "string", required: false, input: false },
       termsAcceptedAt: { type: "date", required: false, input: false },
       termsVersion: { type: "string", required: false, input: false },
+      role: { type: "string", required: false, input: false },
     },
     // Self-serve deletion from Settings. The before-hook below makes the password mandatory.
     deleteUser: {

@@ -1,12 +1,12 @@
 "use client";
 
-import { LogOut, Settings, User } from "lucide-react";
+import { ChartColumn, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DropdownMenu } from "radix-ui";
 import { authClient } from "@/lib/auth/client";
 
-export function ProfileMenu({ name, initials }: { name: string; initials: string }) {
+export function ProfileMenu({ name, initials, isAdmin }: { name: string; initials: string; isAdmin: boolean }) {
   const router = useRouter();
   return (
     <DropdownMenu.Root>
@@ -36,6 +36,13 @@ export function ProfileMenu({ name, initials }: { name: string; initials: string
               <Settings aria-hidden className="size-4" /> Settings
             </Link>
           </DropdownMenu.Item>
+          {isAdmin ? (
+            <DropdownMenu.Item asChild className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-panel-raised">
+              <Link href="/admin">
+                <ChartColumn aria-hidden className="size-4" /> Admin dashboard
+              </Link>
+            </DropdownMenu.Item>
+          ) : null}
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           <DropdownMenu.Item
             className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-danger outline-none data-[highlighted]:bg-danger/10"

@@ -19,7 +19,8 @@
     "db:check": "tsx src/db/check-consistency.ts",
     "db:deploy": "drizzle-kit migrate && tsx src/db/seed.ts",
     "deploy:check": "tsx scripts/deploy-check.mts",
-    "guide:pdf": "tsx scripts/guide-pdf.mts"
+    "guide:pdf": "tsx scripts/guide-pdf.mts",
+    "admin:grant": "tsx src/db/grant-admin.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

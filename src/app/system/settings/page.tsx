@@ -21,6 +21,7 @@ export default async function SettingsPage() {
               focusAreas: profile.focusAreas,
               preferredDifficulty: profile.preferredDifficulty,
               dailyTarget: profile.dailyTarget,
+              showOnLeaderboard: profile.showOnLeaderboard,
             }}
           />
         </div>

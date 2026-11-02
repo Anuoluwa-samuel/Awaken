@@ -25,22 +25,6 @@ export function resolveQuestXp(difficulty: Difficulty, requested?: number | null
   return Math.min(max, Math.max(min, Math.round(requested)));
 }
 
-export type CapResult = { granted: number; capped: boolean; reason: string | null };
-
-/** Applies the per-day quest-XP cap given XP already earned toward it today. */
-export function applyDailyXpCap(amount: number, earnedToday: number): CapResult {
-  const room = Math.max(0, LIMITS.dailyQuestXpCap - earnedToday);
-  const granted = Math.min(amount, room);
-  return {
-    granted,
-    capped: granted < amount,
-    reason:
-      granted < amount
-        ? `Daily quest XP limit of ${LIMITS.dailyQuestXpCap} reached — progress recorded, ${amount - granted} XP not awarded today.`
-        : null,
-  };
-}
-
 export function attributePointsFor(difficulty: Difficulty, earnedTodayForAttribute: number): number {
   const room = Math.max(0, LIMITS.dailyAttributeCap - earnedTodayForAttribute);
   return Math.min(DIFFICULTY_ATTRIBUTE_POINTS[difficulty], room);

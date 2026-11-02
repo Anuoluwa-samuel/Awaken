@@ -11,6 +11,7 @@ export const PLAYER_PAGES = [
   "/system/goals/new",
   "/system/skills",
   "/system/achievements",
+  "/system/leaderboard",
   "/system/progress",
   "/system/notifications",
   "/system/profile",

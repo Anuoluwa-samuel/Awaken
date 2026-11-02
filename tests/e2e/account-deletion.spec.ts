@@ -16,11 +16,16 @@ test("a player can delete their account from Settings", async ({ page }) => {
   await visit(page, "/system/settings");
   await page.getByRole("button", { name: "Delete account…" }).click();
   const submit = page.getByRole("button", { name: "Delete my account" });
-  await expect(submit).toBeDisabled();
 
-  // Wrong password: refused, nothing deleted.
+  // The button always responds: submitting an incomplete form says what's missing.
+  await expect(submit).toBeEnabled();
+  await submit.click();
+  await expect(page.getByText("Enter your password.")).toBeVisible();
+  await expect(page.getByText("Type DELETE to confirm.")).toBeVisible();
+
+  // Wrong password: refused, nothing deleted. Capitals and stray spaces don't matter.
   await page.getByLabel("Password").fill("not-my-password");
-  await page.getByLabel("Type DELETE to confirm").fill("DELETE");
+  await page.getByLabel("Type DELETE to confirm").fill("delete ");
   await submit.click();
   await expect(page.getByText("That password isn't right.")).toBeVisible();
   expect(await sql`select 1 from "user" where id = ${userId}`).toHaveLength(1);

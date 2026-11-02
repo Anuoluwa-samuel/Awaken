@@ -10,6 +10,7 @@ import {
   ScrollText,
   Settings,
   Timer,
+  Trophy,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/system/goals", label: "Goals", icon: Flag },
   { href: "/system/skills", label: "Skills", icon: GitBranch },
   { href: "/system/achievements", label: "Achievements", icon: Award },
+  { href: "/system/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/system/progress", label: "Progress", icon: Activity },
   { href: "/system/notifications", label: "Notifications", icon: Bell, mobile: true },
   { href: "/system/settings", label: "Settings", icon: Settings },

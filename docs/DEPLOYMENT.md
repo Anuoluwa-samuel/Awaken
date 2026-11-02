@@ -124,6 +124,18 @@ Delete the file when you're done if you don't want production secrets on disk.
 - **Errors:** route-level and global error pages never show stack traces; production builds strip
   error messages and show a reference digest you can match in Vercel's logs.
 
+## Admin access
+
+The dashboard is at `/admin`. Sign up normally, then grant your account access from your machine,
+with the production database URL set as in step 3:
+
+```bash
+pnpm admin:grant you@example.com
+```
+
+Add `--revoke` to remove access. It takes effect on the next page load. Everyone else gets the normal
+"not found" page.
+
 ## Analytics
 
 The code is in place; Vercel only collects data once you switch it on:

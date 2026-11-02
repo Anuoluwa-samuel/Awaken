@@ -102,8 +102,8 @@ export default async function QuestsPage({ searchParams }: PageProps<"/system/qu
       </div>
 
       <p className="text-xs leading-relaxed text-ink-faint">
-        Completions are self-reported — the System trusts you. Quest XP is limited to {LIMITS.dailyQuestXpCap} per day,
-        and custom quests give XP for up to {LIMITS.customCompletionsPerCategoryPerDay} completions per category per day.
+        Completions are self-reported — the System trusts you. There&apos;s no limit on how much XP or how many levels you
+        can earn in a day, though custom quests give XP for up to {LIMITS.customCompletionsPerCategoryPerDay} completions per category per day.
         Unfinished daily quests expire at your day reset and never cost you XP.
       </p>
     </div>

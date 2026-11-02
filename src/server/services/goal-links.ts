@@ -84,7 +84,7 @@ export async function completeGoalIfDone(tx: AppDb, userId: string, goalId: stri
       idempotencyKey: `goal:${g.id}`,
       now,
     });
-    xp = grant.status === "granted" ? { granted: grant.granted, note: grant.capReason } : { granted: 0, note: "Already rewarded." };
+    xp = grant.status === "granted" ? { granted: grant.granted, note: null } : { granted: 0, note: "Already rewarded." };
   }
   await notify(tx, {
     userId,

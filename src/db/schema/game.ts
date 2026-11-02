@@ -61,6 +61,8 @@ export const playerProfile = pgTable(
     dailyTarget: smallint("daily_target"),
     avatarUrl: text("avatar_url"),
     equippedTitle: text("equipped_title"),
+    /** Listed on the global leaderboard. Off by default for under-18s (see createPlayer). */
+    showOnLeaderboard: boolean("show_on_leaderboard").notNull().default(true),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -86,6 +88,7 @@ export const playerProgress = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [
+    index("player_progress_total_xp_idx").on(t.totalXp),
     check("total_xp_non_negative", sql`${t.totalXp} >= 0`),
     check("skill_points_balance", sql`${t.skillPointsSpent} <= ${t.skillPointsEarned}`),
   ],

@@ -37,16 +37,19 @@ export function SidebarNav({ unread }: { unread: number }) {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
+            title={label}
             className={cn(
-              "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors group-data-[collapsed=true]:justify-center",
               active ? "bg-glow-soft text-ink" : "text-ink-muted hover:bg-panel-raised hover:text-ink",
             )}
           >
             {active ? <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded bg-glow shadow-[0_0_8px_#4f9dff]" /> : null}
             <Icon aria-hidden className={cn("size-4", active && "text-glow")} />
-            <span className="flex-1">{label}</span>
+            <span className="flex-1 group-data-[collapsed=true]:sr-only">{label}</span>
             {href === "/system/notifications" && unread > 0 ? (
-              <span className="rounded bg-glow px-1.5 font-mono text-[11px] font-semibold text-bg">{unread}</span>
+              <span className="rounded bg-glow px-1.5 font-mono text-[11px] font-semibold text-bg group-data-[collapsed=true]:absolute group-data-[collapsed=true]:right-0.5 group-data-[collapsed=true]:top-0.5 group-data-[collapsed=true]:px-1 group-data-[collapsed=true]:text-[9px]">
+                {unread}
+              </span>
             ) : null}
           </Link>
         );

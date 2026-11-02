@@ -9,7 +9,7 @@ export const LEGAL = {
   governingLaw: "Nigeria" as string | null,
   /** Players must be at least this old to create an account. */
   minimumAge: 13,
-  updated: "2026-10-31",
+  updated: "2026-11-02",
 } as const;
 
 export function legalUpdatedLabel() {

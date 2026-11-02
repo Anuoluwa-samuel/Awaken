@@ -30,6 +30,7 @@ import {
 import { focusXp } from "@/lib/progression/focus";
 import { xpToReach } from "@/lib/progression/levels";
 import { pageMetadata } from "@/lib/site";
+import { LEADERBOARD_SIZE } from "@/server/services/leaderboard";
 
 export const metadata: Metadata = pageMetadata({
   title: "Player guide",
@@ -51,6 +52,7 @@ const SECTIONS = [
   ["attributes", "Attributes"],
   ["skills", "Skills"],
   ["achievements", "Achievements and titles"],
+  ["leaderboard", "Leaderboard"],
   ["progress", "Progress and notifications"],
   ["account", "Your account"],
   ["faq", "Common questions"],
@@ -327,9 +329,9 @@ export default function GuidePage() {
               rows={RANKS.map((r) => [r.label, r.minLevel, xpToReach(r.minLevel).toLocaleString("en-US")])}
             />
             <p>
-              <strong>Daily limits</strong> keep things balanced. Quests, habits and focus can earn up to{" "}
-              {LIMITS.dailyQuestXpCap} XP per day, and each attribute can gain up to {LIMITS.dailyAttributeCap} points
-              per day. Weekly challenges, goals and achievements aren&apos;t limited this way.
+              <strong>There&apos;s no daily limit on XP or levels.</strong> Everything you complete counts, however
+              much you do in a day. Attributes grow more gradually, at up to {LIMITS.dailyAttributeCap} points per
+              attribute per day.
             </p>
           </Section>
 
@@ -372,12 +374,29 @@ export default function GuidePage() {
             />
           </Section>
 
+          <Section id="leaderboard">
+            <p>
+              The <strong>Leaderboard</strong> page ranks players around the world by lifetime XP. It shows the top{" "}
+              {LEADERBOARD_SIZE} and your own place, wherever you are. Players on equal XP share a place, and you appear
+              once you&apos;ve earned your first XP.
+            </p>
+            <p>
+              Other players see your display name, title, level, rank and XP, never your email. If you&apos;re 18 or
+              over you&apos;re listed by default, and if you&apos;re under 18 you&apos;re hidden unless you choose to
+              join. You can change this any time in <strong>Settings</strong>.
+            </p>
+          </Section>
+
           <Section id="progress">
             <p>
               <strong>Status</strong> is your home screen: level, rank, attributes and recent activity.{" "}
               <strong>Progress</strong> shows charts of your XP, quests and focus time over 7 days up to a year.{" "}
               <strong>Notifications</strong> lists level-ups, rank-ups, reminders and security alerts inside the app.
               AWAKEN doesn&apos;t send push notifications.
+            </p>
+            <p>
+              On a computer, use the button beside the logo to collapse the sidebar to icons and give your screen more
+              room. AWAKEN remembers your choice.
             </p>
           </Section>
 
@@ -411,9 +430,10 @@ export default function GuidePage() {
           <Section id="faq">
             <h3>Why did I get less XP than the quest said, or none?</h3>
             <p>
-              You&apos;ve probably reached a limit: {LIMITS.dailyQuestXpCap} XP per day from quests, habits and focus, or{" "}
-              {LIMITS.customCompletionsPerCategoryPerDay} rewarded custom quests per category. The System tells you when
-              this happens. The limits reset when your new day starts.
+              You&apos;ve probably completed more than {LIMITS.customCompletionsPerCategoryPerDay} custom quests in one
+              category today, or finished more than {GOAL_RULES.maxRewardedPerDay} goals. The System tells you when this
+              happens, and the count resets when your new day starts. Check-ins on rest days and focus sessions ended
+              early also earn no XP.
             </p>
             <h3>I pressed Complete by mistake. Can I undo it?</h3>
             <p>Not at the moment. Completions are final, so check before you press.</p>

@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import {
   attributeLedger,
   levelEvent,
@@ -9,7 +9,7 @@ import {
 } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { ATTRIBUTE_INFO, LIMITS, RANKS, type Attribute } from "@/lib/progression/config";
-import { applyDailyXpCap, applyXp, type ProgressionChange } from "@/lib/progression/rewards";
+import { applyXp, type ProgressionChange } from "@/lib/progression/rewards";
 import { questDay, questDayBounds } from "@/lib/time";
 import { notify } from "./notifications";
 
@@ -24,9 +24,6 @@ import { notify } from "./notifications";
 // that earned it (e.g. a quest completion).
 
 export type XpEvent = (typeof xpLedger.$inferInsert)["eventType"];
-
-/** Events that count toward the daily quest-XP cap. */
-const CAPPED_EVENTS: XpEvent[] = ["quest_completed", "habit_completed", "focus_completed"];
 
 export type XpGrant = {
   userId: string;
@@ -47,8 +44,6 @@ export type XpGrantResult =
       ledgerId: string;
       requested: number;
       granted: number;
-      /** Explains a reduced grant, e.g. the daily cap. */
-      capReason: string | null;
       change: ProgressionChange;
     };
 
@@ -100,25 +95,7 @@ export async function grantXp(tx: AppDb, grant: XpGrant): Promise<XpGrantResult>
   });
   if (existing) return { status: "duplicate", idempotencyKey: grant.idempotencyKey };
 
-  let granted = grant.amount;
-  let capReason: string | null = null;
-  if (CAPPED_EVENTS.includes(grant.eventType)) {
-    const { start, end } = await playerDay(tx, grant.userId, now);
-    const [{ earned }] = await tx
-      .select({ earned: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int` })
-      .from(xpLedger)
-      .where(
-        and(
-          eq(xpLedger.userId, grant.userId),
-          inArray(xpLedger.eventType, CAPPED_EVENTS),
-          gte(xpLedger.createdAt, start),
-          lt(xpLedger.createdAt, end),
-        ),
-      );
-    const capped = applyDailyXpCap(grant.amount, earned);
-    granted = capped.granted;
-    capReason = capped.reason;
-  }
+  const granted = grant.amount;
 
   // The row lock makes a conflict here impossible in practice; the unique key is the backstop.
   const [ledger] = await tx
@@ -129,7 +106,7 @@ export async function grantXp(tx: AppDb, grant: XpGrant): Promise<XpGrantResult>
       sourceType: grant.sourceType,
       sourceId: grant.sourceId ?? null,
       amount: granted,
-      reason: capReason ? `${grant.reason} (${capReason})` : grant.reason,
+      reason: grant.reason,
       idempotencyKey: grant.idempotencyKey,
       createdAt: now,
     })
@@ -182,7 +159,7 @@ export async function grantXp(tx: AppDb, grant: XpGrant): Promise<XpGrantResult>
     });
   }
 
-  return { status: "granted", ledgerId: ledger.id, requested: grant.amount, granted, capReason, change };
+  return { status: "granted", ledgerId: ledger.id, requested: grant.amount, granted, change };
 }
 
 export type AttributeGrant = {

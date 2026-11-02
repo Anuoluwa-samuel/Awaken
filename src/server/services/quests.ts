@@ -399,7 +399,7 @@ export async function completeQuest(
       questTitle: quest.title,
       xp:
         xp.status === "granted"
-          ? { requested: quest.xpReward, granted: xp.granted, note: customNote ?? xp.capReason }
+          ? { requested: quest.xpReward, granted: xp.granted, note: customNote ?? null }
           : { requested: quest.xpReward, granted: 0, note: "Already rewarded." },
       attributes,
       levelChange: change.levelsGained > 0 ? change : null,

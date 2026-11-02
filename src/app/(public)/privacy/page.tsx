@@ -59,11 +59,23 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
+      <h2>What other players can see</h2>
+      <p>
+        If you&apos;re on the global leaderboard, other signed-in players can see your display name, title, level, rank
+        and XP. They never see your email or your individual quests, habits and goals. Players aged 18 and over are
+        listed by default, and under-18s are hidden unless they choose to join. You can change this at any time in
+        Settings.
+      </p>
+
       <h2>Why we use it</h2>
       <ul>
         <li>To run your account and the game: generating quests on your own clock and calculating your progress.</li>
         <li>To keep accounts secure: preventing password guessing, spam sign-ups and abuse.</li>
         <li>To send emails you need, such as confirming your address or resetting your password.</li>
+        <li>
+          To understand how AWAKEN is used, through site-wide totals such as sign-ups and quests completed. Our admin
+          dashboard shows only these totals, not individual players.
+        </li>
       </ul>
       <p>
         We process your data because it&apos;s needed to provide the service you signed up for, and, for the security
@@ -86,7 +98,8 @@ export default function PrivacyPage() {
       <h2>Cookies and local storage</h2>
       <p>
         AWAKEN sets one essential cookie that keeps you signed in. It&apos;s removed when you sign out and expires
-        after 14 days without use. The focus timer remembers a suggested break in your browser&apos;s local storage;
+        after 14 days without use. A second small cookie remembers whether you collapsed the sidebar, and stays for up
+        to a year. Neither is used for tracking. The focus timer remembers a suggested break in your browser&apos;s local storage;
         that never leaves your device. We use no advertising or third-party tracking cookies.
       </p>
 

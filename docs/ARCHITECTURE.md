@@ -152,9 +152,7 @@ large reward can cross several levels; the reward service records one
 `level_event` per grant spanning `from_level → to_level`.
 
 Anti-grind safeguards (enforced on the server, shown to the user):
-- **Daily quest-XP soft cap: 400 XP per player day** from quests/focus. Beyond
-  it, completions are still recorded but award 0 XP, with the reason stated.
-  Achievements and weekly challenges are not capped.
+- **No daily XP limit.** All quest, habit and focus XP counts (the 400 XP/day cap was removed on 2026-11-02). Per-day anti-farming limits remain on rewarded custom quests (§6a) and goals (§6e), and on attribute points.
 - Custom quests: max **3 rewarded completions per category per day**; a
   recurring custom quest can be rewarded at most once per day.
 - Rewards snapshot onto the quest at creation; editing a quest's difficulty
@@ -261,7 +259,7 @@ Player-authored recurring quests are generated with `kind = custom`, so custom l
 **Weekly challenges** (`src/server/services/weekly.ts`): weeks run Monday–Sunday in quest days.
 Each week a player gets the system weekly templates matching their focus areas plus "Complete five
 planned tasks" (any category counts). Reward = 2 × the difficulty default (100 XP for hard), not
-subject to the daily cap. Unique on `(user, template, week_start)`. Unfinished challenges expire at
+subject to any daily limit. Unique on `(user, template, week_start)`. Unfinished challenges expire at
 the deadline. Progress only moves inside a quest completion transaction, is capped at the target,
 and the reward is granted when the target is first reached (`reward_claimed_at` records it).
 
@@ -305,7 +303,7 @@ Missing a day can reset a streak; it never changes XP. Copy is encouraging ("Fre
 your best is 9 days"), never punitive.
 
 **Rewards.** A check-in that *counts toward the schedule* (a scheduled weekday, or within the
-weekly target) earns 5 XP (`habit_completed`, counted in the daily quest-XP cap) and 1 point of the
+weekly target) earns 5 XP (`habit_completed`) and 1 point of the
 habit's attribute. Rest-day and over-target check-ins are recorded with no reward. Key:
 `habit:{habitId}:{questDay}`. One check-in per habit per quest day (unique index).
 
@@ -371,7 +369,7 @@ re-checks that the session is full (2 s tolerance) and rejects anything early.
 |---|---|
 | Lengths | 10–45 min; up to 90 min with the Deep Focus skill (presets 15/25/45, +50/90) |
 | Active sessions | one per player (partial unique index on running/paused) — a second start returns the active one |
-| Full session reward | round(minutes × 0.4) XP (25 min → 10) + 1 Discipline; key `focus:{id}`; counts toward the daily cap |
+| Full session reward | round(minutes × 0.4) XP (25 min → 10) + 1 Discipline; key `focus:{id}`; no daily limit |
 | Ended early | status `abandoned`, credited focused seconds recorded, **no XP** |
 | Linked quest | completed by the session when still open and its estimate ≤ session length → quest rewards only (`method = focus_session`); otherwise the focus reward applies and the player is told why |
 | Breaks | 5 min, or 15 min after every 4th full session today; client-only (localStorage, server-time based), skippable, earn nothing |
@@ -496,6 +494,22 @@ unchanged. `redactAnalyticsUrl` (`src/lib/web-analytics.ts`) runs in `beforeSend
 path segments become `[id]` and every query parameter except `range` is dropped, so emails
 (`/verify-email?email=`), reset tokens and `?next=` targets never leave the browser.
 
+**Leaderboard** (`src/server/services/leaderboard.ts`, `/system/leaderboard`): top 100 by lifetime XP
+with `rank()` (equal XP shares a place), plus the viewer's own place. Only opted-in players with XP
+are ranked; only display name, title, level, rank and XP are returned. `player_profile.show_on_leaderboard`
+defaults on, except under-18s (`createPlayer`), and is changed in Settings. There is no verification:
+XP is self-reported, and custom quests can reach 4,800 XP a day (8 categories × 3 rewarded × 200 XP max).
+
+**Admin dashboard** (`/admin`, `src/server/services/admin-analytics.ts`): aggregates only, from the
+database. `user.role` is `player` or `admin`, and `input: false` in Better Auth, so no request can
+set it; `pnpm admin:grant <email> [--revoke]` is the only way to change it, and writes an audit
+event. `requireAdmin()` answers non-admins with the normal 404, so the area doesn't reveal itself.
+"Active" means earned XP in the window, so a visit with no activity doesn't count; 0-XP actions
+don't either. Retention = of accounts at least N days old, the share that earned XP N+ days after joining.
+
+**Sidebar:** `CollapsibleSidebar` stores the choice in the `awaken-sidebar` cookie, so the server
+renders the right width with no jump. Children use `group-data-[collapsed=true]:` variants.
+
 **Spam protection** (`src/lib/auth/spam-rules.ts`, before-hook on `/sign-up/email`): a honeypot
 field (`website`, off-screen, `tabindex=-1`, `aria-hidden`); a signed form token issued by the
 register page (HMAC with `BETTER_AUTH_SECRET`) that must be at least `SIGN_UP_MIN_SECONDS` (3)
@@ -536,12 +550,9 @@ or rolls back together with the action that earned it.
 
 1. `SELECT … FROM player_progress WHERE user_id = $1 FOR UPDATE` — every reward
    write for a player is serialized on this row. This is also what makes the
-   daily cap race-free: two parallel grants cannot both read "390 earned".
+   per-day limits (custom quests, attributes) race-free: two parallel grants cannot both read a stale count.
 2. If `xp_ledger.idempotency_key` already exists → return `duplicate`, change nothing.
-3. For capped events (`quest_completed`, `focus_completed`) sum today's capped
-   XP inside the player's quest-day window and clamp the grant (§3). A capped
-   grant is still written, with `amount` reduced (possibly 0) and the reason
-   appended, so the player can see why.
+3. Insert the ledger row. XP has no daily limit, so the full amount is granted.
 4. `INSERT INTO xp_ledger … ON CONFLICT (idempotency_key) DO NOTHING` — the
    unique key is the backstop if the lock were ever bypassed.
 5. Recompute level/rank/skill points with the pure functions and update
