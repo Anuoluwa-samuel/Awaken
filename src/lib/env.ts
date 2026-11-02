@@ -19,8 +19,23 @@ const schema = z
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).optional(),
     /** Minimum seconds between opening the sign-up form and submitting it (anti-bot). Tests use 0. */
     SIGN_UP_MIN_SECONDS: z.coerce.number().min(0).max(60).default(3),
+    /** Most account emails to send per UTC day, site-wide. Resend's free plan allows 100. 0 stops email. */
+    EMAIL_DAILY_BUDGET: z.coerce.number().int().min(0).default(90),
+    /** Most new accounts per UTC day, site-wide. 0 pauses sign-ups. */
+    SIGNUP_DAILY_BUDGET: z.coerce.number().int().min(0).default(500),
+    /** Seconds to reuse leaderboard and admin figures before re-querying. Tests use 0. */
+    READ_CACHE_SECONDS: z.coerce.number().int().min(0).default(30),
+    /** Protects the daily maintenance job. Vercel Cron sends it automatically. */
+    CRON_SECRET: z.string().min(16).optional(),
+    /** Cloudflare Turnstile (captcha). Both keys on, or both off. */
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
+    TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
     /** Vercel BotID on sign-up, sign-in and password reset. Off until verified on a deployment. */
     NEXT_PUBLIC_BOTID_ENABLED: bool,
+  })
+  .refine((e) => !e.NEXT_PUBLIC_TURNSTILE_SITE_KEY === !e.TURNSTILE_SECRET_KEY, {
+    path: ["TURNSTILE_SECRET_KEY"],
+    message: "Set both Turnstile keys or neither",
   })
   .refine((e) => !e.RESEND_API_KEY || !!e.EMAIL_FROM, {
     path: ["EMAIL_FROM"],

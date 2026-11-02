@@ -11,12 +11,15 @@ import {
   playerQuest,
   playerSkill,
   questCompletion,
+  rateLimit,
+  usageCounter,
   user,
   xpLedger,
 } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { fillDaily } from "@/lib/analytics";
 import { addDays } from "@/lib/time";
+import { getSiteUsage } from "./limits";
 
 const DAY_MS = 86_400_000;
 export const ADMIN_TREND_DAYS = 30;
@@ -131,6 +134,12 @@ export async function getAdminAnalytics(db: AppDb, now = new Date()) {
     .orderBy(desc(count()))
     .limit(5);
 
+  // ── Usage and cost ────────────────────────────────────────────────────────
+  const site = await getSiteUsage(db, now);
+  const [storage] = await db.select({ bytes: sql<string>`pg_database_size(current_database())` }).from(sql`(select 1) as one`);
+  const [{ rows: rateRows }] = await db.select({ rows: count() }).from(rateLimit);
+  const [{ rows: usageRows }] = await db.select({ rows: count() }).from(usageCounter);
+
   // ── Security ──────────────────────────────────────────────────────────────
   const [[lockedNow], [lockouts]] = await Promise.all([
     db.select({ v: count() }).from(authLockout).where(gt(authLockout.lockedUntil, now)),
@@ -170,6 +179,15 @@ export async function getAdminAnalytics(db: AppDb, now = new Date()) {
       categories: byValue(categories),
       ageGroups: byValue(ageGroups),
       achievements: byValue(popularAchievements),
+    },
+    usage: {
+      emailsSent: n(site.emails_sent),
+      emailsSkipped: n(site.emails_skipped),
+      signups: n(site.signups),
+      rateLimited: n(site.rate_limited),
+      quotaReached: n(site.quota_reached),
+      databaseBytes: n(storage?.bytes),
+      bookkeepingRows: n(rateRows) + n(usageRows),
     },
     security: { lockedNow: n(lockedNow?.v), lockouts30d: n(lockouts?.v) },
   };

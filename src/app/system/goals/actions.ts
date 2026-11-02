@@ -16,12 +16,18 @@ import {
   type MilestoneResult,
 } from "@/server/services/goals";
 import { QuestError } from "@/server/services/quests";
+import type { QuotaMetric } from "@/lib/limits";
+import { guardAction, guardQuota } from "@/server/guards";
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 const idSchema = z.string().uuid();
 
-async function run<T>(fn: (userId: string) => Promise<T>): Promise<Result<T>> {
+async function run<T>(fn: (userId: string) => Promise<T>, quota?: QuotaMetric): Promise<Result<T>> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
+  const overQuota = quota ? await guardQuota(user.id, quota) : null;
+  if (overQuota) return { ok: false, error: overQuota };
   try {
     const data = await fn(user.id);
     revalidatePath("/system", "layout");
@@ -44,13 +50,13 @@ export async function addMilestoneAction(input: unknown): Promise<Result<void>> 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid milestone." };
   return run(async (userId) => {
     await addMilestone(db, userId, parsed.data.goalId, parsed.data.title);
-  });
+  }, "milestones_added");
 }
 
 export async function createQuestForMilestoneAction(id: unknown): Promise<Result<{ questId: string }>> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return { ok: false, error: "Invalid request." };
-  return run((userId) => createQuestForMilestone(db, userId, parsed.data));
+  return run((userId) => createQuestForMilestone(db, userId, parsed.data), "quests_created");
 }
 
 export async function archiveGoalAction(id: unknown): Promise<Result<void>> {
@@ -63,8 +69,12 @@ export async function archiveGoalAction(id: unknown): Promise<Result<void>> {
 
 export async function createGoalAction(input: unknown): Promise<Result> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
   const parsed = goalSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Some fields are invalid." };
+  const overQuota = await guardQuota(user.id, "goals_created");
+  if (overQuota) return { ok: false, error: overQuota };
   try {
     await createGoal(db, user.id, parsed.data);
   } catch (err) {

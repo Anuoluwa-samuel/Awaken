@@ -1,5 +1,9 @@
 import "server-only";
+import { createHmac } from "node:crypto";
+import { db } from "@/db";
 import { env } from "@/lib/env";
+import { EMAILS_PER_RECIPIENT_PER_DAY } from "@/lib/limits";
+import { consumeDaily, countSiteEvent, SITE_SCOPE } from "@/server/services/limits";
 
 export type Mail = { to: string; subject: string; text: string };
 
@@ -42,4 +46,23 @@ export async function sendWithResend(mail: Mail, apiKey: string, from: string, f
     // Status only: the response body can echo addresses, and keys must never reach logs.
     throw new Error(`Email provider rejected the message (HTTP ${res.status}).`);
   }
+}
+
+/**
+ * Sends an account email within the budgets: a per-recipient daily limit, so nobody's inbox can be
+ * flooded, and a site-wide daily limit, so a flood can't run up a bill. Over budget, the email is
+ * skipped and logged: the same reply goes back either way, so it reveals nothing about an account.
+ */
+export async function sendBudgetedEmail(mail: Mail): Promise<boolean> {
+  const recipient = createHmac("sha256", env.BETTER_AUTH_SECRET).update(mail.to.trim().toLowerCase()).digest("base64url");
+  const allowed =
+    (await consumeDaily(db, `email:${recipient}`, "emails_sent", EMAILS_PER_RECIPIENT_PER_DAY)) &&
+    (await consumeDaily(db, SITE_SCOPE, "emails_sent", env.EMAIL_DAILY_BUDGET));
+  if (!allowed) {
+    console.warn("[email] skipped: over the daily budget");
+    await countSiteEvent(db, "emails_skipped");
+    return false;
+  }
+  await sendEmail(mail);
+  return true;
 }

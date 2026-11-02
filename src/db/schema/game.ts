@@ -498,3 +498,21 @@ export const auditEvent = pgTable(
   },
   (t) => [index("audit_event_actor_idx").on(t.actorUserId, t.createdAt)],
 );
+
+// ─── Usage ───────────────────────────────────────────────────────────────────
+
+/**
+ * Daily counters behind quotas and budgets (src/server/services/limits.ts). `scope` is a user id,
+ * "site", or a hashed email address, so it deliberately has no foreign key: account deletion
+ * clears a player's rows, and daily maintenance removes old ones.
+ */
+export const usageCounter = pgTable(
+  "usage_counter",
+  {
+    scope: text("scope").notNull(),
+    metric: text("metric").notNull(),
+    day: text("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.scope, t.metric, t.day] }), index("usage_counter_day_idx").on(t.day)],
+);

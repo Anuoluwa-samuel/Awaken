@@ -42,6 +42,19 @@ secrets. Specifically:
   The nightly job has been tested on temporary databases, but not yet against Neon.
 - **The backup database can be up to a day behind.** Neon's instant restore covers the gap.
 
+## Limits and costs
+
+- **The request throttle is per server instance,** so across many instances it's approximate. It's a
+  cheap first filter; the exact limits behind it are shared in Postgres. Vercel's own firewall is
+  the place to stop a large distributed attack.
+- **Limits can't be set per player or changed without a redeploy.** There's no admin screen for them,
+  and no paid tier with higher ones.
+- **The app can't see your actual bills.** The dashboard shows emails, sign-ups and database size, not
+  Vercel or Neon charges. Set spending limits with each provider (DEPLOYMENT.md).
+- **Off Vercel,** throttling relies on `AUTH_IP_HEADER` naming a header your proxy overwrites.
+- **If Cloudflare is down,** captcha is skipped for that request, and logged. Rate limits and lockout
+  still apply.
+
 ## Leaderboard fairness
 
 - **XP is self-reported and there's no daily XP limit,** so someone can claim activity they didn't do
@@ -58,8 +71,6 @@ secrets. Specifically:
 - **BotID is off by default** (`NEXT_PUBLIC_BOTID_ENABLED`) until it's verified on a Vercel
   deployment; see DEPLOYMENT.md. Without it, a browser-driving bot that waits 3 s, skips the
   honeypot and uses a real email domain can still sign up, at most 5 times an hour per IP.
-- **Password-reset emails** are limited per IP (3 per 5 min), not per recipient, so someone using
-  many IPs could send repeated reset emails to one address. Matters once email is switched on.
 - The throwaway-domain list is short and hand-kept (`spam-rules.ts`).
 
 ## Legal & privacy

@@ -13,6 +13,7 @@ import {
   startQuest,
   type CompletionResult,
 } from "@/server/services/quests";
+import { guardAction, guardQuota } from "@/server/guards";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -25,6 +26,8 @@ function failure(err: unknown): { ok: false; error: string } {
 
 export async function completeQuestAction(input: unknown): Promise<ActionResult<CompletionResult>> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
   const parsed = completeQuestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid request." };
   try {
@@ -40,6 +43,8 @@ export async function completeQuestAction(input: unknown): Promise<ActionResult<
 
 export async function startQuestAction(questId: unknown): Promise<ActionResult> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
   const parsed = questIdSchema.safeParse(questId);
   if (!parsed.success) return { ok: false, error: "Invalid request." };
   try {
@@ -53,6 +58,8 @@ export async function startQuestAction(questId: unknown): Promise<ActionResult> 
 
 export async function cancelQuestAction(questId: unknown): Promise<ActionResult> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
   const parsed = questIdSchema.safeParse(questId);
   if (!parsed.success) return { ok: false, error: "Invalid request." };
   try {
@@ -66,8 +73,12 @@ export async function cancelQuestAction(questId: unknown): Promise<ActionResult>
 
 export async function createCustomQuestAction(input: unknown): Promise<ActionResult> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
   const parsed = customQuestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Some fields are invalid." };
+  const overQuota = await guardQuota(user.id, "quests_created");
+  if (overQuota) return { ok: false, error: overQuota };
   try {
     await createCustomQuest(db, user.id, parsed.data);
   } catch (err) {

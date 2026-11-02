@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
+import { Captcha, captchaFetchOptions } from "@/components/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,8 @@ export function RegisterForm({ requireVerification, formToken }: { requireVerifi
   const { errors, isSubmitting } = form.formState;
   const ageAnswer = useWatch({ control: form.control, name: "ageAnswer" });
   const tooYoung = ageAnswer === "under13";
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   const onSubmit = form.handleSubmit(async ({ name, email, password, ageAnswer, guardianConsent, acceptTerms }, event) => {
     const website = (event?.target as HTMLFormElement | undefined)?.elements.namedItem("website");
@@ -72,13 +75,19 @@ export function RegisterForm({ requireVerification, formToken }: { requireVerifi
       ...{ ageAnswer, guardianConsent: ageAnswer === "teen" && guardianConsent, acceptTerms },
       // Anti-spam (src/lib/auth/spam-rules.ts): the signed form token and the honeypot field.
       ...{ formToken, website: website instanceof HTMLInputElement ? website.value : "" },
+      ...captchaFetchOptions(captchaToken),
     });
     if (error) {
+      setCaptchaReset((n) => n + 1);
       // Deliberately vague so the form can't be used to probe which emails are registered.
       setError(
         error.status === 429
           ? "Too many sign-ups from this network. Try again later."
-          : (error.code === "DISPOSABLE_EMAIL" || error.code === "BOT_DETECTED") && error.message
+          : (error.code === "DISPOSABLE_EMAIL" ||
+                error.code === "BOT_DETECTED" ||
+                error.code === "CAPTCHA_REQUIRED" ||
+                error.code === "SIGN_UPS_PAUSED") &&
+              error.message
             ? error.message
             : "We couldn't create that account. If you already have one, sign in instead.",
       );
@@ -171,6 +180,7 @@ export function RegisterForm({ requireVerification, formToken }: { requireVerifi
         </Link>
         .
       </Checkbox>
+      <Captcha onToken={setCaptchaToken} resetKey={captchaReset} />
       <Button type="submit" size="lg" disabled={isSubmitting || tooYoung} className="mt-2">
         <Sparkles aria-hidden />
         {isSubmitting ? "Initializing…" : "Awaken"}

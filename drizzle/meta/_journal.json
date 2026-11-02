@@ -64,6 +64,13 @@
       "when": 1793611175221,
       "tag": "0008_leaderboard_and_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793650033296,
+      "tag": "0009_usage_counter",
+      "breakpoints": true
     }
   ]
 }

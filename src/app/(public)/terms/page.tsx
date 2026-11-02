@@ -58,6 +58,10 @@ export default function TermsPage() {
           probe, scan or attack the service, get around its rate limits or sign-in protections, or interfere with how
           it runs;
         </li>
+        <li>
+          go beyond the fair-use limits on how fast you can use AWAKEN and how much you can create each day, which are
+          shown in Settings;
+        </li>
         <li>use bots or scripts to create accounts or to generate rewards, or log activity you didn&apos;t do to climb the leaderboard;</li>
         <li>copy, resell or reverse-engineer the service, except where the law allows it.</li>
       </ul>

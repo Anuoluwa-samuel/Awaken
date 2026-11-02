@@ -6,8 +6,10 @@ import { Wordmark } from "@/components/brand/logo";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
 import { requireAdmin } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 import { CATEGORIES, CATEGORY_INFO, RANKS } from "@/lib/progression/config";
 import { PRIVATE_PAGE } from "@/lib/site";
+import { cachedRead } from "@/server/read-cache";
 import { ADMIN_TREND_DAYS, getAdminAnalytics } from "@/server/services/admin-analytics";
 
 export const metadata: Metadata = { title: "Admin dashboard", ...PRIVATE_PAGE };
@@ -87,7 +89,7 @@ const ageName = (key: string | null) => (key === "adult" ? "18+" : key === "teen
 
 export default async function AdminPage() {
   await requireAdmin();
-  const a = await getAdminAnalytics(db);
+  const a = await cachedRead("admin-analytics", () => getAdminAnalytics(db), Math.min(env.READ_CACHE_SECONDS, 60));
 
   return (
     <div className="system-grid min-h-dvh">
@@ -159,6 +161,17 @@ export default async function AdminPage() {
             <Breakdown title="Most-earned achievements" rows={a.distributions.achievements.map((r) => ({ label: r.key ?? "Unknown", value: r.value }))} />
             <Breakdown title="Accounts by age group" rows={a.distributions.ageGroups.map((r) => ({ label: ageName(r.key), value: r.value }))} />
           </div>
+        </Section>
+
+        <Section title="Usage and cost, today (UTC)">
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Tile label="Emails sent" value={`${fmt.format(a.usage.emailsSent)}/${fmt.format(env.EMAIL_DAILY_BUDGET)}`} hint={`${fmt.format(a.usage.emailsSkipped)} skipped over budget`} />
+            <Tile label="Sign-ups" value={`${fmt.format(a.usage.signups)}/${fmt.format(env.SIGNUP_DAILY_BUDGET)}`} hint="pauses at the daily budget" />
+            <Tile label="Database size" value={`${Math.round((a.usage.databaseBytes / 1_048_576) * 10) / 10} MB`} hint="compare with your Neon plan's limit" />
+            <Tile label="Actions rate-limited" value={fmt.format(a.usage.rateLimited)} hint="players going too fast" />
+            <Tile label="Quotas reached" value={fmt.format(a.usage.quotaReached)} hint="daily creation limits hit" />
+            <Tile label="Bookkeeping rows" value={fmt.format(a.usage.bookkeepingRows)} hint="limit counters, cleared daily" />
+          </dl>
         </Section>
 
         <Section title="Community and security">

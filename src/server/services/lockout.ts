@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { authLockout, user } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { LOCKOUT, lockMinutes } from "@/lib/auth/lockout-rules";
@@ -100,5 +100,11 @@ export async function lockoutStatus(db: AppDb, email: string, now = new Date()) 
 
 /** Housekeeping: rows for idle, unlocked addresses (e.g. sprayed fake emails). */
 export async function pruneLockouts(db: AppDb, olderThan: Date) {
-  await db.delete(authLockout).where(sql`${authLockout.lockedUntil} is null and ${authLockout.lastAttemptAt} < ${olderThan}`);
+  await db.delete(authLockout).where(and(isNull(authLockout.lockedUntil), lt(authLockout.lastAttemptAt, olderThan)));
+}
+
+/** Wrong passwords counted so far for this email, for deciding when to ask for a captcha. */
+export async function failedSignIns(db: AppDb, email: string) {
+  const row = await db.query.authLockout.findFirst({ where: eq(authLockout.email, email), columns: { attempts: true } });
+  return row?.attempts ?? 0;
 }

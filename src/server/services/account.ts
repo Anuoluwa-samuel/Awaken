@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { AppDb } from "@/db/types";
-import { auditEvent, authLockout, verification } from "@/db/schema";
+import { auditEvent, authLockout, usageCounter, verification } from "@/db/schema";
 import { normaliseEmail } from "@/lib/auth/lockout-rules";
 
 /**
@@ -14,6 +14,7 @@ export async function purgeAccountExtras(db: AppDb, userId: string, email: strin
     await tx.delete(auditEvent).where(eq(auditEvent.actorUserId, userId));
     // Pending password-reset tokens store the user id as their value.
     await tx.delete(verification).where(eq(verification.value, userId));
+    await tx.delete(usageCounter).where(eq(usageCounter.scope, userId));
     const key = normaliseEmail(email);
     if (key) await tx.delete(authLockout).where(eq(authLockout.email, key));
   });

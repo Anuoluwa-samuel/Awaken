@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { Captcha, captchaFetchOptions } from "@/components/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,21 @@ export function ForgotForm() {
     defaultValues: { email: "" },
   });
   const { errors, isSubmitting } = form.formState;
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   const onSubmit = form.handleSubmit(async ({ email }) => {
     setError(null);
-    const { error } = await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" });
+    const { error } = await authClient.requestPasswordReset({
+      email,
+      redirectTo: "/reset-password",
+      ...captchaFetchOptions(captchaToken),
+    });
+    if (error) setCaptchaReset((n) => n + 1);
+    if (error?.code === "CAPTCHA_REQUIRED" && error.message) {
+      setError(error.message);
+      return;
+    }
     if (error?.status === 429) {
       setError("Too many requests. Try again in a few minutes.");
       return;
@@ -52,6 +64,7 @@ export function ForgotForm() {
       <Field id="email" label="Email" error={errors.email?.message}>
         <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register("email")} />
       </Field>
+      <Captcha onToken={setCaptchaToken} resetKey={captchaReset} />
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? "Sending…" : "Send reset link"}
       </Button>

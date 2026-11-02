@@ -425,6 +425,15 @@ export default function GuidePage() {
                 password, so keep it somewhere safe.
               </li>
               <li>
+                <strong>Fair use:</strong> to keep AWAKEN fast for everyone, there are limits on how quickly you can make
+                changes and how much you can create each day. Normal play won&apos;t reach them, and they never limit
+                your XP. See today&apos;s usage in <strong>Settings</strong>. Limits reset at midnight UTC.
+              </li>
+              <li>
+                <strong>Security check:</strong> you may be asked to complete a quick check when signing up, resetting
+                your password or after several wrong passwords.
+              </li>
+              <li>
                 <strong>Deleting your account:</strong> go to <strong>Settings → Delete account</strong>. It permanently
                 removes your account and all your data straight away, and it can&apos;t be undone.
               </li>
@@ -442,6 +451,11 @@ export default function GuidePage() {
               category today, or finished more than {GOAL_RULES.maxRewardedPerDay} goals. The System tells you when this
               happens, and the count resets when your new day starts. Check-ins on rest days and focus sessions ended
               early also earn no XP.
+            </p>
+            <h3>It says I&apos;m going too fast, or that I&apos;ve reached a limit. What should I do?</h3>
+            <p>
+              &ldquo;Too fast&rdquo; clears within a minute, so wait a moment and try again. A daily limit on creating
+              things resets at midnight UTC, and you can see your usage in Settings. Neither affects your progress.
             </p>
             <h3>I pressed Complete by mistake. Can I undo it?</h3>
             <p>Not at the moment. Completions are final, so check before you press.</p>

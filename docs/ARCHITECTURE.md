@@ -523,6 +523,29 @@ don't either. Retention = of accounts at least N days old, the share that earned
 **Sidebar:** `CollapsibleSidebar` stores the choice in the `awaken-sidebar` cookie, so the server
 renders the right width with no jump. Children use `group-data-[collapsed=true]:` variants.
 
+**Limits and cost controls** (numbers in `src/lib/limits.ts`, engine in `src/server/services/limits.ts`):
+
+| Layer | What | Where | Cost |
+|---|---|---|---|
+| Request throttle | token bucket per IP: burst 120, 5/s. Answers 429 + `Retry-After` | `src/proxy.ts`, dynamic routes only | none (in memory, per instance) |
+| Action rate limit | 60 changes a minute per player, in every server action | `guardAction`, shared in Postgres | 1 upsert |
+| Auth rate limits | per IP, per endpoint (sign-up 5/hour, sign-in 10/min …) | Better Auth, shared in Postgres | 1 upsert |
+| Daily quotas | creations per player per UTC day, shown in Settings | `guardQuota`, `usage_counter` | 1 upsert |
+| Site budgets | emails (90) and sign-ups (500) a day; emails per recipient (5) | `sendBudgetedEmail`, sign-up hook | 1–2 upserts |
+| Captcha | Turnstile on sign-up, password reset, and sign-in after 3 wrong passwords | `requireCaptcha`, off without keys | Cloudflare call |
+
+Limits are atomic single statements, so parallel requests can't overshoot (real-Postgres race test).
+A test fails if any exported server action skips `guardAction`. Quotas cover creating things, never
+completing them, so they can't limit XP. If Cloudflare is unreachable the request is let through and
+logged, because rate limits and lockout still apply. Prerendered pages aren't throttled: the CDN
+serves them for almost nothing, and running code for them would add cost.
+
+What saves money: nav links don't prefetch (each page view would otherwise trigger about a dozen
+function calls); leaderboard and admin reads are shared for `READ_CACHE_SECONDS` per instance;
+`/api/health` hits the database at most every 15 s; Speed Insights samples half of visits; and
+`/api/cron/maintenance` deletes expired sessions, tokens, counters and old read notifications daily.
+It never touches XP, quests, habits or goals. The admin dashboard shows usage against each budget.
+
 **Spam protection** (`src/lib/auth/spam-rules.ts`, before-hook on `/sign-up/email`): a honeypot
 field (`website`, off-screen, `tabindex=-1`, `aria-hidden`); a signed form token issued by the
 register page (HMAC with `BETTER_AUTH_SECRET`) that must be at least `SIGN_UP_MIN_SECONDS` (3)

@@ -140,6 +140,29 @@ Add `--revoke` to remove access. It takes effect on the next page load. Everyone
 
 Set these up before you have real players: see [BACKUPS.md](BACKUPS.md).
 
+## Limits, captcha and cost controls
+
+Rate limits, quotas, throttling and budgets work with no setup. Three optional steps:
+
+**Turn on the daily clean-up.** Without this, expired rows accumulate. In Vercel, add `CRON_SECRET`
+(run `openssl rand -base64 32`) for Production and redeploy. `vercel.json` already schedules it, and
+Vercel sends the secret automatically. Without the variable the job answers 404 and does nothing.
+
+**Turn on captcha** (recommended once you have real traffic):
+
+1. In [Cloudflare](https://dash.cloudflare.com) → **Turnstile** → **Add widget** (free). Add your site's
+   domain, including your `vercel.app` address, and choose **Managed**.
+2. In Vercel, add `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`, then redeploy. The
+   site key is read at build time, and the same step adds Cloudflare to the security headers.
+3. Create a test account to confirm it. To turn captcha off, remove both and redeploy.
+
+**Adjust the budgets** if you need to: `EMAIL_DAILY_BUDGET` (default 90; Resend's free plan allows
+100 a day) and `SIGNUP_DAILY_BUDGET` (default 500). Setting either to `0` is an emergency stop.
+
+**Also set spending limits where the bills are**, since the app can't do this for you:
+Vercel → Settings → Billing → Spend Management (Pro plan; Hobby stops at its limits rather than
+billing), Neon → your plan's compute limits, and Resend's plan limits.
+
 ## Analytics
 
 The code is in place; Vercel only collects data once you switch it on:
@@ -152,7 +175,7 @@ Both are free on Hobby within monthly event limits, cookie-free (no consent bann
 record no session replays. Page addresses are scrubbed of emails, reset tokens and record ids
 before sending.
 
-## Bot protection (optional, recommended once live)
+## Bot protection with BotID (optional)
 
 Sign-up already blocks scripts on its own: a hidden honeypot field, a signed form token that must be
 3 s – 24 h old, a list of throwaway-inbox domains, and 5 sign-ups per hour per IP. For browser bots

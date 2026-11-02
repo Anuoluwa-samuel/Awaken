@@ -12,7 +12,7 @@ export function SiteAnalytics() {
   return (
     <>
       <Analytics beforeSend={(event) => ({ ...event, url: redactAnalyticsUrl(event.url) })} />
-      <SpeedInsights beforeSend={(event) => ({ ...event, url: redactAnalyticsUrl(event.url) })} />
+      <SpeedInsights sampleRate={0.5} beforeSend={(event) => ({ ...event, url: redactAnalyticsUrl(event.url) })} />
     </>
   );
 }

@@ -3,6 +3,7 @@ import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { Contact, LegalPage } from "@/components/legal/legal-page";
 import { LEGAL } from "@/lib/legal";
+import { READ_NOTIFICATION_RETENTION_DAYS } from "@/server/services/maintenance";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
@@ -53,7 +54,10 @@ export default function PrivacyPage() {
       <h3>Security records</h3>
       <ul>
         <li>For each signed-in session: your IP address and browser type, so you can be kept signed in safely.</li>
-        <li>Short-lived counters keyed by IP address that limit how often sign-up and sign-in can be tried.</li>
+        <li>
+          Short-lived counters keyed by IP address or account that limit how quickly the site can be used, and daily
+          counts of things you create. Email addresses in these counters are stored only in scrambled form.
+        </li>
         <li>
           A count of recent wrong passwords for an email address, used to pause sign-in after repeated failures.
         </li>
@@ -119,6 +123,10 @@ export default function PrivacyPage() {
         <li>
           <strong>Resend</strong> delivers account emails, when email is switched on.
         </li>
+        <li>
+          <strong>Cloudflare Turnstile</strong> checks for automated traffic on sign-up, password reset and repeated
+          failed sign-ins, when switched on. It sees your IP address and browser details for that check.
+        </li>
       </ul>
       <p>
         These providers may process data outside your country. They protect it under their own data processing terms,
@@ -132,7 +140,9 @@ export default function PrivacyPage() {
           to recover from data loss, are removed within 30 days.
         </li>
         <li>Sessions: until you sign out, or 14 days after you last used AWAKEN.</li>
-        <li>Rate-limit counters: minutes. Wrong-password counts: cleared when you sign in or reset your password.</li>
+        <li>Rate-limit counters: up to a day. Daily usage counts: about a month.</li>
+        <li>Wrong-password counts: cleared when you sign in or reset your password, and removed after a month otherwise.</li>
+        <li>Notifications you&apos;ve read: {READ_NOTIFICATION_RETENTION_DAYS} days.</li>
       </ul>
 
       <h2>Your rights</h2>
