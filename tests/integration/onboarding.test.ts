@@ -73,7 +73,11 @@ describe("ensureDailyQuests", () => {
       where: and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, "2026-10-27")),
     });
     expect(old.every((q) => q.status === "expired")).toBe(true);
-    expect((await listQuestsForDay(db, userId, "2026-10-28")).length).toBe(old.length);
+    // Day one is the starter set; from day two, the day's own rotating mix.
+    const next = await listQuestsForDay(db, userId, "2026-10-28");
+    expect(next.length).toBe(5);
+    const yesterday = new Set(old.map((q) => q.templateId));
+    expect(next.filter((q) => yesterday.has(q.templateId))).toEqual([]);
   });
 
   it("keeps players' quests isolated", async () => {

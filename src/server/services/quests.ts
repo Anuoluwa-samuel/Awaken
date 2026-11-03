@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, notInArray, sql } from "drizzle-orm";
 import {
   attributeLedger,
+  habit,
   playerProfile,
   playerProgress,
   playerQuest,
@@ -17,6 +18,7 @@ import {
   QUEST_LIMITS,
   type Attribute,
 } from "@/lib/progression/config";
+import { DEFAULT_DAILY_QUESTS, pickDailyQuests } from "@/lib/progression/daily-rotation";
 import { levelProgress, rankProgress, type LevelProgress, type RankProgress } from "@/lib/progression/levels";
 import { canTransition, OPEN_STATUSES } from "@/lib/progression/quest-state";
 import { applyXp, resolveQuestXp, type ProgressionChange } from "@/lib/progression/rewards";
@@ -57,9 +59,66 @@ async function loadClock(tx: AppDb, userId: string, now: Date) {
 // ─── Daily rollover ──────────────────────────────────────────────────────────
 
 /**
+ * The rotating part of today's quests. Decided once per quest day: if any exist already (even skipped
+ * ones), nothing more is added, so a settings change or reload can't top up today's list. It reads only
+ * earlier days, so parallel requests reach the same answer and the unique index absorbs the overlap.
+ */
+async function pickTodaysRotation(
+  tx: AppDb,
+  userId: string,
+  today: QuestDate,
+  starters: (typeof questTemplate.$inferSelect)[],
+  fixed: (typeof questTemplate.$inferSelect)[],
+) {
+  const fixedIds = fixed.map((t) => t.id);
+  const notFixed = fixedIds.length > 0 ? notInArray(playerQuest.templateId, fixedIds) : undefined;
+  const [existing] = await tx
+    .select({ id: playerQuest.id })
+    .from(playerQuest)
+    .where(and(eq(playerQuest.userId, userId), eq(playerQuest.kind, "daily"), eq(playerQuest.questDate, today), notFixed))
+    .limit(1);
+  if (existing) return [];
+
+  const history = await tx
+    .select({ templateId: playerQuest.templateId, last: sql<string>`max(${playerQuest.questDate})::text` })
+    .from(playerQuest)
+    .where(and(eq(playerQuest.userId, userId), eq(playerQuest.kind, "daily"), lt(playerQuest.questDate, today)))
+    .groupBy(playerQuest.templateId);
+  // Day one keeps the welcoming starter set chosen at setup. Rotation begins on day two.
+  if (history.length === 0 && starters.length > 0) return starters;
+
+  const profile = await tx.query.playerProfile.findFirst({
+    where: eq(playerProfile.userId, userId),
+    columns: { focusAreas: true, dailyTarget: true },
+  });
+  const pool = (
+    await tx
+      .select()
+      .from(questTemplate)
+      .where(
+        and(
+          isNull(questTemplate.ownerUserId),
+          isNull(questTemplate.requiredSkill),
+          eq(questTemplate.isActive, true),
+          eq(questTemplate.cadence, "daily"),
+        ),
+      )
+  ).filter((t) => !fixedIds.includes(t.id));
+
+  const ids = pickDailyQuests({
+    pool,
+    focusAreas: profile?.focusAreas ?? [],
+    count: profile?.dailyTarget ?? DEFAULT_DAILY_QUESTS,
+    seed: `${userId}:${today}`,
+    lastSeen: new Map(history.map((row) => [row.templateId!, row.last])),
+  });
+  return ids.map((id) => pool.find((t) => t.id === id)!);
+}
+
+/**
  * Idempotently prepares today's quests for a player (docs/ARCHITECTURE.md §6):
  * expires unfinished scheduled quests from earlier days and one-off custom quests
- * past their deadline, then inserts today's scheduled set. Safe to call on every
+ * past their deadline, then inserts today's set: fixed quests plus a rotating mix. Safe to call on every
  * request and concurrently — the unique index on (user_id, template_id, quest_date)
  * prevents duplicates.
  */
@@ -109,11 +168,24 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
         ),
       );
 
-    if (scheduled.length > 0) {
+    // Fixed quests appear on every scheduled day: the player's own recurring quests, skill rewards, and
+    // quests a habit is linked to. Other scheduled rows are only the starter set for the very first day.
+    const linked = await tx
+      .select({ templateId: habit.linkedTemplateId })
+      .from(habit)
+      .where(and(eq(habit.userId, userId), isNull(habit.archivedAt), isNotNull(habit.linkedTemplateId)));
+    const linkedIds = new Set(linked.map((row) => row.templateId));
+    const isFixed = (t: typeof questTemplate.$inferSelect) => !!t.ownerUserId || !!t.requiredSkill || linkedIds.has(t.id);
+    const fixed = scheduled.filter(({ template }) => isFixed(template)).map(({ template }) => template);
+    const starters = scheduled.filter(({ template }) => !isFixed(template)).map(({ template }) => template);
+    const rotating = await pickTodaysRotation(tx, userId, today, starters, fixed);
+    const todays = [...fixed, ...rotating];
+
+    if (todays.length > 0) {
       const inserted = await tx
         .insert(playerQuest)
         .values(
-          scheduled.map(({ template: t }) => ({
+          todays.map((t) => ({
             userId,
             templateId: t.id,
             // Player-authored recurring quests stay "custom" so custom safeguards apply.
@@ -138,7 +210,7 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
           userId,
           type: "daily",
           title: "Daily quests available",
-          body: `${scheduled.length} quest${scheduled.length === 1 ? "" : "s"} for ${today}.`,
+          body: `${todays.length} quest${todays.length === 1 ? "" : "s"} for ${today}.`,
           href: "/system/quests",
           dedupeKey: `daily:${userId}:${today}`,
           createdAt: now,

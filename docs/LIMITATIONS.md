@@ -83,8 +83,7 @@ secrets. Specifically:
   yours" and "doesn't exist" (asserted in E2E). Fix if a real 404 matters: remove
   `src/app/system/loading.tsx` or move the ownership check above the boundary.
 - **Time zone / day-start changes** are limited to once every 7 days (prevents farming extra daily
-  sets). Changing focus areas later doesn't reschedule existing starter quests; it affects weekly
-  challenges.
+  sets). Changing focus areas or the daily target applies from the next day.
 - **Rewards are fixed at creation.** Quests can't be edited (only cancelled), so a reward can never
   change silently.
 

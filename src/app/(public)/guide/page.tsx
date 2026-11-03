@@ -27,6 +27,7 @@ import {
   RANKS,
   WEEKLY_XP_MULTIPLIER,
 } from "@/lib/progression/config";
+import { DEFAULT_DAILY_QUESTS } from "@/lib/progression/daily-rotation";
 import { focusXp } from "@/lib/progression/focus";
 import { xpToReach } from "@/lib/progression/levels";
 import { pageMetadata } from "@/lib/site";
@@ -166,14 +167,15 @@ export default function GuidePage() {
                 still counts toward the day you started it.
               </li>
               <li>
-                <strong>Focus areas:</strong> what you&apos;re working on. These choose your starter quests and weekly
-                challenges. The options are: {CATEGORIES.map((c) => CATEGORY_INFO[c].label.toLowerCase()).join(", ")}.
+                <strong>Focus areas:</strong> what you&apos;re working on. Most of your daily quests and your weekly
+                challenges come from these. The options are: {CATEGORIES.map((c) => CATEGORY_INFO[c].label.toLowerCase()).join(", ")}.
               </li>
               <li>
                 <strong>Preferred difficulty:</strong> the default for quests you create.
               </li>
               <li>
-                <strong>Daily quest target (optional):</strong> how many daily quests you want. You start with up to 5.
+                <strong>Daily quest target (optional):</strong> how many daily quests you want. The default is{" "}
+                {DEFAULT_DAILY_QUESTS}.
               </li>
             </ul>
           </Section>
@@ -191,8 +193,14 @@ export default function GuidePage() {
 
           <Section id="quests">
             <p>
-              Each day you get a fresh set of quests on the <strong>Quests</strong> page. Do the real-life task, then
+              Each day you get a different mix of quests on the <strong>Quests</strong> page. Do the real-life task, then
               press <strong>Complete</strong>. You can also open a quest to read its details or add a note.
+            </p>
+            <p>
+              Most come from your focus areas, and about one in five comes from somewhere new, for variety. Quests take
+              turns, so you won&apos;t see the same one two days running. Each day stays achievable, with only a few big
+              quests at a time. If you want something every day, make it a recurring quest of your own or link it to a
+              habit: those always appear.
             </p>
             <Table
               caption="Rewards by quest difficulty"
@@ -446,11 +454,10 @@ export default function GuidePage() {
             <p>
               No. Everything is self-reported, and the game only means something if you&apos;re honest with yourself.
             </p>
-            <h3>I changed my focus areas. Why are my daily quests the same?</h3>
+            <h3>I changed my focus areas. Why are today&apos;s quests the same?</h3>
             <p>
-              Focus areas choose your starter quests when you first set up, and your weekly challenges from then on.
-              Changing them doesn&apos;t replace your existing daily quests. Add a custom recurring quest for anything
-              new.
+              Each day&apos;s quests are set when the day starts, so changes to your focus areas or daily target apply
+              from tomorrow.
             </p>
             <h3>Is AWAKEN medical or fitness advice?</h3>
             <p>

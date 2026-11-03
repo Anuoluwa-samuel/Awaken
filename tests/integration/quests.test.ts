@@ -247,7 +247,7 @@ describe("weekly challenges", () => {
     for (const day of ["2026-10-27", "2026-10-28", "2026-10-29"]) {
       const now = new Date(`${day}T11:00:00Z`);
       await ensureDailyQuests(db, userId, now);
-      const workout = (await dailyQuests(userId, day)).find((q) => q.category === "fitness")!;
+      const workout = (await dailyQuests(userId, day)).find((q) => q.category === "fitness" && q.difficulty !== "hard")!;
       await completeQuest(db, userId, workout.id, { now });
     }
     const [workouts] = (await listWeeklyChallenges(db, userId, "2026-10-26")).filter((w) => w.category === "fitness");
@@ -274,13 +274,20 @@ describe("weekly challenges", () => {
 
   it("reports a level-up caused by the weekly reward, not just the quest XP", async () => {
     const userId = await newPlayer(["fitness"]);
+    // A recurring quest, so the numbers don't depend on the day's rotating mix.
+    await createCustomQuest(
+      db,
+      userId,
+      custom({ title: "Daily workout", category: "fitness", scheduleType: "recurring", days: [0, 1, 2, 3, 4, 5, 6] }),
+      new Date("2026-10-27T10:00:00Z"),
+    );
     let last = null;
     // 3 workouts = 75 XP + First Blood 10 (still level 1); the third also completes the
     // weekly (+100) and unlocks Consistent (+25) → 210 XP.
     for (const day of ["2026-10-27", "2026-10-28", "2026-10-29"]) {
       const now = new Date(`${day}T11:00:00Z`);
       await ensureDailyQuests(db, userId, now);
-      const workout = (await dailyQuests(userId, day)).find((q) => q.category === "fitness")!;
+      const workout = (await listQuestsForDay(db, userId, day)).find((q) => q.title === "Daily workout")!;
       last = await completeQuest(db, userId, workout.id, { now });
     }
     expect(last!.xp.granted).toBe(25);

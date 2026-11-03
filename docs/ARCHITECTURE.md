@@ -215,6 +215,19 @@ granted when the target is first reached.
 2. `UPDATE player_quest SET status='expired' WHERE kind='daily' AND quest_date < today AND status IN ('available','in_progress')`.
 3. `INSERT … SELECT active daily templates … ON CONFLICT (user_id, template_id, quest_date) DO NOTHING`.
 
+**Daily rotation** (`pickDailyQuests`, `src/lib/progression/daily-rotation.ts`). Quests differ each day:
+
+- *Fixed* quests appear every scheduled day: the player's recurring quests, skill-reward quests, and
+  quests a habit is linked to. `player_quest_schedule` holds these.
+- *Rotating* quests are picked once per quest day, up to `daily_target` (default 5), from all active system
+  templates. Day one uses the starter set chosen at setup; rotation starts on day two.
+- The pick is deterministic (seeded by player and day) and reads only earlier days, so reloads and
+  parallel requests agree. Once today has any rotating quest, skipped ones included, no more are added.
+- Least recently seen comes first, and yesterday's quests are skipped unless the pool is exhausted. One slot in
+  five goes outside the focus areas, areas take turns, and at most a third of the day may be big quests.
+
+New templates reach players through `pnpm db:seed`. Until then rotation uses whatever templates exist.
+
 Concurrent loads therefore cannot duplicate a day's quests. Missed quests
 never touch the ledger, so lifetime XP is never reduced. A scheduled job
 (`/api/cron/daily`) can call the same function later for notifications.
