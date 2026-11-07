@@ -15,6 +15,7 @@ import { PRIVATE_PAGE } from "@/lib/site";
 import { getPlayerContext } from "@/server/player-context";
 import { getShellSummary } from "@/server/services/dashboard";
 import { listNotifications } from "@/server/services/notifications";
+import { RankBadge } from "@/components/player/rank-emblem";
 
 // Everything under /system is private to the signed-in player.
 export const metadata: Metadata = PRIVATE_PAGE;
@@ -78,7 +79,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
           </Link>
           <div className="hidden items-center gap-2 text-sm text-ink-muted lg:flex">
             <Badge tone="glow">LV {summary.level.level}</Badge>
-            <Badge tone="arcane">{summary.rank.rank.label}</Badge>
+            <RankBadge rank={summary.rank.rank.id} />
           </div>
           <div className="flex items-center gap-3">
             <Link

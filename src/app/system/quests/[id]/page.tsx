@@ -91,7 +91,7 @@ export default async function QuestDetailPage({ params }: PageProps<"/system/que
               {attributes.map((a) => (
                 <li key={a.id} className="flex justify-between gap-3">
                   <span className="text-ink-muted">{ATTRIBUTE_INFO[a.attribute].label}</span>
-                  <span className="font-mono text-arcane">+{a.amount}</span>
+                  <span className="font-mono text-frost">+{a.amount}</span>
                 </li>
               ))}
             </ul>

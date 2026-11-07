@@ -91,11 +91,11 @@ export function HabitForm({ linkable }: { linkable: { id: string; title: string;
         <legend className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Schedule</legend>
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
-            <input type="radio" value="days" className="accent-[#4f9dff]" {...form.register("scheduleType")} />
+            <input type="radio" value="days" className="accent-[#2583ff]" {...form.register("scheduleType")} />
             Specific days
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" value="weekly" className="accent-[#4f9dff]" {...form.register("scheduleType")} />
+            <input type="radio" value="weekly" className="accent-[#2583ff]" {...form.register("scheduleType")} />
             Times per week
           </label>
         </div>

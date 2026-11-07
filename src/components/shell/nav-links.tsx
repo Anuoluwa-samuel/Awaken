@@ -43,7 +43,7 @@ export function SidebarNav({ unread }: { unread: number }) {
               active ? "bg-glow-soft text-ink" : "text-ink-muted hover:bg-panel-raised hover:text-ink",
             )}
           >
-            {active ? <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded bg-glow shadow-[0_0_8px_#4f9dff]" /> : null}
+            {active ? <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded bg-glow shadow-[0_0_8px_#2583ff]" /> : null}
             <Icon aria-hidden className={cn("size-4", active && "text-glow")} />
             <span className="flex-1 group-data-[collapsed=true]:sr-only">{label}</span>
             {href === "/system/notifications" && unread > 0 ? (

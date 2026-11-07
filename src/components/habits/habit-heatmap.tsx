@@ -2,7 +2,7 @@ import type { HeatCell } from "@/lib/progression/habits";
 import { cn } from "@/lib/utils/cn";
 
 const STATE_CLASS: Record<HeatCell["state"], string> = {
-  done: "bg-glow shadow-[0_0_6px_#4f9dff99]",
+  done: "bg-glow shadow-[0_0_6px_#2583ff99]",
   missed: "bg-surface ring-1 ring-inset ring-line-strong",
   rest: "bg-panel-raised/50",
   pending: "bg-surface ring-1 ring-inset ring-glow/60",

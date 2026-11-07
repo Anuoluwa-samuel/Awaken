@@ -41,7 +41,7 @@ export function QuestRow({
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <Badge tone="muted">{CATEGORY_INFO[quest.category].label}</Badge>
           <Badge tone="muted">{quest.difficulty}</Badge>
-          {!compact ? <Badge tone="arcane">+{ATTRIBUTE_INFO[quest.attribute].short}</Badge> : null}
+          {!compact ? <Badge tone="frost">+{ATTRIBUTE_INFO[quest.attribute].short}</Badge> : null}
           {quest.status === "in_progress" ? <Badge tone="glow">In progress</Badge> : null}
           {quest.kind === "custom" ? <Badge tone="muted">Custom</Badge> : null}
           {quest.estimatedMinutes ? (

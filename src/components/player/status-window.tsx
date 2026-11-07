@@ -1,8 +1,7 @@
-import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
 import type { LevelProgress, RankProgress } from "@/lib/progression/levels";
-import { RankEmblem } from "./rank-emblem";
+import { RankBadge, RankEmblem } from "./rank-emblem";
 
 export function StatusWindow({
   name,
@@ -40,10 +39,10 @@ export function StatusWindow({
           </div>
           <div className="min-w-0">
             <h1 className="truncate font-display text-2xl font-bold tracking-wide">{name}</h1>
-            {title ? <p className="text-sm text-arcane">{title}</p> : <p className="text-sm text-ink-faint">No title equipped</p>}
+            {title ? <p className="text-sm text-frost">{title}</p> : <p className="text-sm text-ink-faint">No title equipped</p>}
             <div className="mt-2 flex items-center gap-2">
               <RankEmblem rank={rank.rank.id} className="size-8" />
-              <Badge tone="arcane">{rank.rank.label}</Badge>
+              <RankBadge rank={rank.rank.id} />
             </div>
           </div>
         </div>
@@ -69,7 +68,7 @@ export function StatusWindow({
               <p className="uppercase tracking-[0.18em] text-ink-muted">
                 {rank.next ? (
                   <>
-                    Next rank · <span className="text-arcane">{rank.next.label}</span> at level {rank.next.minLevel}
+                    Next rank · <span className="text-frost">{rank.next.label}</span> at level {rank.next.minLevel}
                   </>
                 ) : (
                   "Highest rank reached"
@@ -81,7 +80,7 @@ export function StatusWindow({
             </div>
             <ProgressBar
               className="mt-1.5 h-1.5"
-              tone="arcane"
+              tone="frost"
               value={rank.ratio}
               label={rank.next ? `Progress toward ${rank.next.label}` : "Rank progress"}
             />

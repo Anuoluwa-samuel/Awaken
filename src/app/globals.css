@@ -1,24 +1,28 @@
 @import "tailwindcss";
 
-/* AWAKEN design tokens — a dark "system window" palette.
-   Text tokens are chosen for ≥ 4.5:1 contrast on --color-bg and --color-panel. */
+/* AWAKEN design tokens: electric blue for progress and action, awakening lime for moments
+   when something has happened. Text tokens are chosen for >= 4.5:1 contrast on --color-bg,
+   --color-panel and --color-panel-raised (checked in tests/unit/palette.test.ts). */
 @theme {
-  --color-bg: #060912;
-  --color-surface: #0a101d;
-  --color-panel: #0e1626;
-  --color-panel-raised: #131d31;
-  --color-line: #1d2a44;
-  --color-line-strong: #2c4170;
+  --color-bg: #080f1f;
+  --color-surface: #0b1426;
+  --color-panel: #101c30;
+  --color-panel-raised: #121e35;
+  --color-line: #24344d;
+  --color-line-strong: #34507a;
 
-  --color-ink: #e6edf8;
-  --color-ink-muted: #94a3bd;
-  --color-ink-faint: #6b7a94;
+  --color-ink: #e8eef8;
+  --color-ink-muted: #9aa8c0;
+  --color-ink-faint: #7f8dab;
 
-  --color-glow: #4f9dff;
-  --color-glow-soft: #4f9dff1f;
-  --color-arcane: #9b7bff;
-  --color-arcane-soft: #9b7bff1f;
-  --color-success: #3ddc97;
+  /* Electric blue: XP, primary actions, active navigation. */
+  --color-glow: #2583ff;
+  --color-glow-soft: #2583ff1a;
+  /* Pale blue for secondary details (attributes, titles, rank progress). */
+  --color-frost: #8cc2ff;
+  --color-frost-soft: #8cc2ff14;
+  /* Awakening lime: completions, unlocked achievements, level-ups. Use sparingly. */
+  --color-success: #b6ff4a;
   --color-warning: #f5b544;
   --color-danger: #ff6b7a;
 
@@ -27,7 +31,7 @@
   --font-display: var(--font-chakra), var(--font-geist-sans), sans-serif;
   --font-brand: var(--font-montserrat), var(--font-geist-sans), sans-serif;
 
-  --shadow-glow: 0 0 0 1px #4f9dff33, 0 0 24px -6px #4f9dff55;
+  --shadow-glow: 0 0 0 1px #2583ff40, 0 0 24px -6px #2583ff66;
   --shadow-panel: 0 1px 0 0 #ffffff08 inset, 0 12px 40px -16px #000000cc;
 
   --animate-fill: fill 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -63,8 +67,8 @@ html {
 
 body {
   background:
-    radial-gradient(1200px 600px at 85% -10%, #4f9dff14, transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, #9b7bff10, transparent 60%),
+    radial-gradient(1200px 600px at 85% -10%, #2583ff17, transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, #b6ff4a08, transparent 60%),
     var(--color-bg);
   background-attachment: fixed;
   color: var(--color-ink);
@@ -74,8 +78,8 @@ body {
 /* Faint scanline grid behind system panels. */
 .system-grid {
   background-image:
-    linear-gradient(to right, #4f9dff0a 1px, transparent 1px),
-    linear-gradient(to bottom, #4f9dff0a 1px, transparent 1px);
+    linear-gradient(to right, #2583ff0a 1px, transparent 1px),
+    linear-gradient(to bottom, #2583ff0a 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -182,7 +186,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.4em;
   text-transform: uppercase;
-  color: #4f9dff;
+  color: #2583ff;
   opacity: 0;
   animation: intro-fade 500ms ease 1600ms forwards;
 }
@@ -192,7 +196,7 @@ body {
   height: 2px;
   overflow: hidden;
   border-radius: 2px;
-  background: #4f9dff1f;
+  background: #2583ff1f;
   opacity: 0;
   animation: intro-fade 400ms ease 1800ms forwards;
 }
@@ -201,7 +205,7 @@ body {
   position: absolute;
   inset: 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, #4f9dff, #0bc8ff, transparent);
+  background: linear-gradient(90deg, transparent, #2583ff, #0bc8ff, transparent);
   animation: intro-sweep 1.1s cubic-bezier(0.4, 0, 0.2, 1) 1800ms infinite;
   transform: translateX(-100%);
 }
@@ -267,7 +271,7 @@ body {
 .levelup-backdrop {
   position: absolute;
   inset: 0;
-  background: radial-gradient(50% 45% at 50% 50%, #2f6fd633, #04070fb3 75%);
+  background: radial-gradient(50% 45% at 50% 50%, #b6ff4a1f, #04070fb3 75%);
   animation: intro-fade 300ms ease both;
 }
 .levelup-panel {
@@ -282,7 +286,7 @@ body {
   border: 1px solid var(--color-line-strong);
   border-radius: 14px;
   background: linear-gradient(180deg, #121c32f2, #0b1222f2);
-  box-shadow: var(--shadow-panel), 0 0 0 1px #4f9dff40, 0 0 60px -10px #4f9dff88;
+  box-shadow: var(--shadow-panel), 0 0 0 1px #b6ff4a55, 0 0 60px -10px #b6ff4a77;
   animation: levelup-in 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 .levelup-rings {
@@ -298,12 +302,12 @@ body {
   width: 120px;
   height: 120px;
   border-radius: 999px;
-  border: 1px solid #4f9dff80;
+  border: 1px solid #b6ff4a90;
   animation: levelup-ring 1400ms cubic-bezier(0.2, 0.7, 0.2, 1) 200ms both;
 }
 .levelup-rings span:nth-child(2) {
   animation-delay: 450ms;
-  border-color: #9b7bff70;
+  border-color: #2583ff90;
 }
 .levelup-eyebrow {
   font-family: var(--font-display);
@@ -311,7 +315,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: var(--color-glow);
+  color: var(--color-success);
 }
 .levelup-title {
   margin-top: 4px;
@@ -320,11 +324,11 @@ body {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: linear-gradient(180deg, #ffffff, #9cc8ff);
+  background: linear-gradient(180deg, #ffffff, #d6ff9c);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 18px #4f9dff66);
+  filter: drop-shadow(0 0 18px #b6ff4a55);
   animation: levelup-title 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
 }
 .levelup-levels {
@@ -342,7 +346,7 @@ body {
   animation: levelup-pop 520ms cubic-bezier(0.3, 1.6, 0.5, 1) 420ms both;
 }
 .levelup-arrow {
-  color: var(--color-glow);
+  color: var(--color-success);
 }
 .levelup-rank {
   margin-top: 16px;
@@ -488,4 +492,84 @@ body {
   .legal-prose li {
     break-inside: avoid;
   }
+}
+
+/* ─── XP bars ────────────────────────────────────────────────────────────────
+   Width eases to its new value when XP is earned; a light sweep marks the gain.  */
+.xp-fill {
+  transition: width 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.xp-gain {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, #ffffffb0, transparent);
+  transform: translateX(-100%);
+  animation: xp-sweep 900ms cubic-bezier(0.4, 0, 0.2, 1) 250ms both;
+}
+.xp-track[data-gain="a"] { animation: xp-pulse-a 1200ms ease-out both; }
+.xp-track[data-gain="b"] { animation: xp-pulse-b 1200ms ease-out both; }
+@keyframes xp-sweep {
+  to { transform: translateX(100%); }
+}
+@keyframes xp-pulse-a {
+  30% { box-shadow: 0 0 14px 2px #2583ffaa; }
+}
+@keyframes xp-pulse-b {
+  30% { box-shadow: 0 0 14px 2px #2583ffaa; }
+}
+
+/* ─── Ranks ──────────────────────────────────────────────────────────────────
+   Each rank looks more impressive than the last: steel → blue → glowing blue →
+   blue with a lime core → lime → animated blue-and-lime (National-Level).        */
+.rank-badge {
+  --rank-line: #7684a0;
+  --rank-bg: #7684a014;
+  --rank-text: #c3cbd9;
+  --rank-glow: transparent;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--rank-line);
+  border-radius: 4px;
+  background: var(--rank-bg);
+  padding: 0.125rem 0.375rem;
+  color: var(--rank-text);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 0 10px -2px var(--rank-glow);
+}
+.rank-badge[data-rank="D"] { --rank-line: #4a6ea8; --rank-bg: #4a6ea81a; --rank-text: #b5c8e6; }
+.rank-badge[data-rank="C"] { --rank-line: #2583ff; --rank-bg: #2583ff1a; --rank-text: #8cc2ff; }
+.rank-badge[data-rank="B"] { --rank-line: #4d9bff; --rank-bg: #2583ff26; --rank-text: #c4deff; --rank-glow: #2583ff99; }
+.rank-badge[data-rank="A"] {
+  --rank-line: #4d9bff; --rank-bg: #2583ff26; --rank-text: #ffffff; --rank-glow: #2583ffcc;
+  border-left: 3px solid #b6ff4a;
+}
+.rank-badge[data-rank="S"] { --rank-line: #b6ff4a; --rank-bg: #b6ff4a1a; --rank-text: #e4ffbf; --rank-glow: #b6ff4aaa; }
+.rank-badge[data-rank="N"] {
+  --rank-text: #ffffff;
+  border-color: transparent;
+  background:
+    linear-gradient(#0b1426, #0b1426) padding-box,
+    linear-gradient(90deg, #2583ff, #b6ff4a, #2583ff) border-box;
+  background-size: 100% 100%, 200% 100%;
+  box-shadow: 0 0 12px -2px #2583ffaa, 0 0 18px -4px #b6ff4a99;
+  animation: rank-shimmer 3s linear infinite;
+}
+@keyframes rank-shimmer {
+  to { background-position: 0 0, -200% 0; }
+}
+
+.rank-emblem[data-rank="B"],
+.rank-emblem[data-rank="A"] { filter: drop-shadow(0 0 6px #2583ff88); }
+.rank-emblem[data-rank="S"] { filter: drop-shadow(0 0 8px #b6ff4a88); }
+.rank-emblem[data-rank="N"] { animation: rank-aura 2.8s ease-in-out infinite; }
+@keyframes rank-aura {
+  0%, 100% { filter: drop-shadow(0 0 6px #2583ffaa) drop-shadow(0 0 2px #b6ff4a66); }
+  50% { filter: drop-shadow(0 0 12px #2583ffcc) drop-shadow(0 0 8px #b6ff4aaa); }
 }

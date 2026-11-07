@@ -1,19 +1,17 @@
 import { Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
-import { RANKS } from "@/lib/progression/config";
 import { cn } from "@/lib/utils/cn";
 import { getPlayerContext } from "@/server/player-context";
 import { getLeaderboard, LEADERBOARD_SIZE, type LeaderboardRow } from "@/server/services/leaderboard";
+import { RankBadge } from "@/components/player/rank-emblem";
 
 export const metadata: Metadata = { title: "Leaderboard" };
 
 const fmt = new Intl.NumberFormat("en-US");
-const rankLabel = (id: LeaderboardRow["rank"]) => RANKS.find((r) => r.id === id)!.label;
 
 function Row({ row, isViewer }: { row: LeaderboardRow; isViewer: boolean }) {
   return (
@@ -29,7 +27,7 @@ function Row({ row, isViewer }: { row: LeaderboardRow; isViewer: boolean }) {
         {row.title ? <p className="truncate text-xs text-ink-faint">{row.title}</p> : null}
       </td>
       <td className="hidden py-2.5 pr-3 sm:table-cell">
-        <Badge tone="arcane">{rankLabel(row.rank)}</Badge>
+        <RankBadge rank={row.rank} />
       </td>
       <td className="py-2.5 pr-3 text-right font-mono text-sm">{row.level}</td>
       <td className="py-2.5 pr-5 text-right font-mono text-sm sm:pr-6">{fmt.format(row.totalXp)}</td>

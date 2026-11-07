@@ -75,7 +75,7 @@ export function LevelUpPanel({ change, onClose }: { change: ProgressionChange; o
           <ul className="mt-2 grid gap-1 text-sm">
             {rewards.map((r) => (
               <li key={r} className="flex items-center gap-2">
-                <span aria-hidden className="size-1.5 rotate-45 bg-glow" />
+                <span aria-hidden className="size-1.5 rotate-45 bg-success" />
                 {r}
               </li>
             ))}

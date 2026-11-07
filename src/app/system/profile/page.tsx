@@ -59,14 +59,14 @@ export default async function ProfilePage() {
                 <li
                   key={r.id}
                   aria-current={isCurrent ? "step" : undefined}
-                  className={cn("flex items-center gap-4 px-5 py-3", isCurrent && "bg-arcane-soft/60")}
+                  className={cn("flex items-center gap-4 px-5 py-3", isCurrent && "bg-frost-soft/60")}
                 >
                   <RankEmblem rank={r.id} className={cn("size-10 shrink-0", !reached && "opacity-35 grayscale")} />
                   <div className="min-w-0 flex-1">
                     <p className={cn("font-display font-semibold tracking-wide", !reached && "text-ink-muted")}>
                       {r.label}
                       {isCurrent ? (
-                        <Badge tone="arcane" className="ml-2 align-middle">
+                        <Badge tone="frost" className="ml-2 align-middle">
                           Current
                         </Badge>
                       ) : null}
@@ -75,7 +75,7 @@ export default async function ProfilePage() {
                       Level {r.minLevel}+ · {fmt.format(xpToReach(r.minLevel))} lifetime XP
                     </p>
                     {i === current + 1 ? (
-                      <ProgressBar className="mt-2 h-1.5" tone="arcane" value={rank.ratio} label={`Progress toward ${r.label}`} />
+                      <ProgressBar className="mt-2 h-1.5" tone="frost" value={rank.ratio} label={`Progress toward ${r.label}`} />
                     ) : null}
                   </div>
                   {i === current + 1 && rank.xpToNextRank != null ? (
@@ -98,7 +98,7 @@ export default async function ProfilePage() {
                   <li key={e.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                     <RankEmblem rank={e.toRank} className="size-8 shrink-0" />
                     <span className="flex-1">
-                      {rankLabel(e.fromRank)} → <span className="text-arcane">{rankLabel(e.toRank)}</span> at level{" "}
+                      {rankLabel(e.fromRank)} → <span className="text-frost">{rankLabel(e.toRank)}</span> at level{" "}
                       {e.toLevel}
                     </span>
                     <DateCell at={e.createdAt} />

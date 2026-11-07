@@ -27,13 +27,13 @@ export function TitlePicker({ titles, equipped }: { titles: { title: string; sou
               key={t.title}
               className={cn(
                 "flex items-center justify-between gap-3 rounded-md border px-3 py-2",
-                on ? "border-arcane/60 bg-arcane-soft" : "border-line bg-surface/60",
+                on ? "border-frost/60 bg-frost-soft" : "border-line bg-surface/60",
               )}
             >
-              <span className={cn("font-display font-semibold tracking-wide", on && "text-arcane")}>{t.title}</span>
+              <span className={cn("font-display font-semibold tracking-wide", on && "text-frost")}>{t.title}</span>
               {on ? (
                 <span className="inline-flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs text-arcane">
+                  <span className="inline-flex items-center gap-1 text-xs text-frost">
                     <Check aria-hidden className="size-3.5" /> Equipped
                   </span>
                   <Button size="sm" variant="ghost" disabled={pending} onClick={() => equip(null)}>

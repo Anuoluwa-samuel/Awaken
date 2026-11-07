@@ -1,5 +1,6 @@
 import { ProgressBar } from "@/components/ui/progress";
 import type { getShellSummary } from "@/server/services/dashboard";
+import { RankBadge } from "@/components/player/rank-emblem";
 
 type Summary = Awaited<ReturnType<typeof getShellSummary>>;
 
@@ -7,9 +8,9 @@ export function PlayerSummary({ name, summary }: { name: string; summary: Summar
   const { level, rank } = summary;
   return (
     <div className="rounded-lg border border-line bg-surface/70 p-3">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <p className="truncate font-display text-sm font-semibold">{name}</p>
-        <p className="shrink-0 font-display text-xs font-semibold tracking-wider text-arcane">{rank.rank.label}</p>
+        <RankBadge rank={rank.rank.id} className="shrink-0" />
       </div>
       <div className="mt-2 flex items-baseline justify-between text-xs text-ink-muted">
         <span>

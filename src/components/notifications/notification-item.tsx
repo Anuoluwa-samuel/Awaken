@@ -74,7 +74,7 @@ export function NotificationItem({ n, compact = false, onNavigate }: { n: Notifi
             {n.createdAt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
           </time>
         </span>
-        {unread ? <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-glow shadow-[0_0_6px_#4f9dff]" /> : null}
+        {unread ? <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-glow shadow-[0_0_6px_#2583ff]" /> : null}
       </button>
     </li>
   );

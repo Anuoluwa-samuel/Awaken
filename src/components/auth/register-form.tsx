@@ -34,7 +34,7 @@ function Checkbox({
           type="checkbox"
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="mt-0.5 size-4 shrink-0 accent-[#4f9dff]"
+          className="mt-0.5 size-4 shrink-0 accent-[#2583ff]"
           {...input}
         />
         <span>{children}</span>

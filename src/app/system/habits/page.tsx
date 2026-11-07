@@ -76,7 +76,7 @@ export default async function HabitsPage({ searchParams }: PageProps<"/system/ha
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           <Badge tone="muted">{describeSchedule(schedule)}</Badge>
                           <Badge tone="muted">{CATEGORY_INFO[h.category].label}</Badge>
-                          <Badge tone="arcane">+{ATTRIBUTE_INFO[h.attribute].short}</Badge>
+                          <Badge tone="frost">+{ATTRIBUTE_INFO[h.attribute].short}</Badge>
                           {item.linkedQuestTitle ? (
                             <Badge tone="glow" title="Checking in completes this quest; only the quest's rewards apply.">
                               <Link2 aria-hidden className="size-3" /> {item.linkedQuestTitle}

@@ -156,11 +156,11 @@ export function QuestBuilder({ defaultDifficulty, today }: { defaultDifficulty: 
         </legend>
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
-            <input type="radio" value="once" className="accent-[#4f9dff]" {...form.register("scheduleType")} />
+            <input type="radio" value="once" className="accent-[#2583ff]" {...form.register("scheduleType")} />
             One-time
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" value="recurring" className="accent-[#4f9dff]" {...form.register("scheduleType")} />
+            <input type="radio" value="recurring" className="accent-[#2583ff]" {...form.register("scheduleType")} />
             Recurring
           </label>
         </div>

@@ -40,7 +40,7 @@ export default async function AchievementsPage() {
                   <div
                     className={cn(
                       "grid size-12 shrink-0 place-items-center rounded-lg border",
-                      done ? "border-warning/50 bg-warning/10 text-warning" : "border-line bg-surface text-ink-faint",
+                      done ? "border-success/50 bg-success/10 text-success shadow-[0_0_14px_-4px_#b6ff4a88]" : "border-line bg-surface text-ink-faint",
                     )}
                   >
                     {done ? <AchievementIcon name={a.icon} className="size-6" /> : <Lock aria-hidden className="size-5" />}

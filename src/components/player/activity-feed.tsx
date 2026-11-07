@@ -48,7 +48,7 @@ export function ActivityFeed({ items, now = new Date() }: { items: ActivityItem[
                 <p className="font-display text-sm font-semibold uppercase tracking-[0.12em]">
                   Level up · {item.fromLevel} → {item.toLevel}
                 </p>
-                {rankUp ? <p className="text-xs text-arcane">Promoted to {rankLabel(item.toRank)}</p> : null}
+                {rankUp ? <p className="text-xs text-frost">Promoted to {rankLabel(item.toRank)}</p> : null}
               </div>
               {time}
             </li>

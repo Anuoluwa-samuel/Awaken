@@ -37,7 +37,7 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
       >
         <X className="size-4" />
       </button>
-      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.3em] text-glow">
+      <p className={`font-display text-[11px] font-semibold uppercase tracking-[0.3em] ${done ? "text-success" : "text-glow"}`}>
         {done ? "Quest completed" : "Already completed"}
       </p>
       <p className="mt-1 pr-6 font-medium">{result.questTitle}</p>
@@ -48,7 +48,7 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
             <span className="ml-1 font-mono text-base tracking-normal text-glow">+{result.xp.granted} XP</span>
           </p>
           {attributeGains.length > 0 ? (
-            <p className="mt-1 text-sm text-arcane">
+            <p className="mt-1 text-sm text-frost">
               {attributeGains.map(([attribute, n]) => `+${n} ${ATTRIBUTE_INFO[attribute].short}`).join(" · ")}
             </p>
           ) : null}
@@ -61,21 +61,21 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
               </p>
             ))}
           {result.achievements.map((a) => (
-            <div key={a.code} className="mt-2 flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
-              <AchievementIcon name={a.icon} className="size-4 shrink-0 text-warning" />
+            <div key={a.code} className="mt-2 flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2">
+              <AchievementIcon name={a.icon} className="size-4 shrink-0 text-success" />
               <p className="text-sm">
-                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.15em] text-warning">
+                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.15em] text-success">
                   Achievement unlocked
                 </span>{" "}
                 {a.name}
                 {a.xpReward ? <span className="font-mono text-glow"> +{a.xpReward} XP</span> : null}
-                {a.titleReward ? <span className="text-arcane"> · Title: {a.titleReward}</span> : null}
+                {a.titleReward ? <span className="text-success"> · Title: {a.titleReward}</span> : null}
               </p>
             </div>
           ))}
           {result.levelChange ? (
-            <div className="mt-3 flex items-center gap-2 rounded-md border border-glow/50 bg-glow-soft px-3 py-2">
-              <Sparkles aria-hidden className="size-4 text-glow" />
+            <div className="mt-3 flex items-center gap-2 rounded-md border border-success/50 bg-success/10 px-3 py-2 shadow-[0_0_18px_-6px_#b6ff4a99]">
+              <Sparkles aria-hidden className="size-4 text-success" />
               <p className="font-display text-sm font-semibold uppercase tracking-[0.15em]">
                 Level up · {result.levelChange.fromLevel} → {result.levelChange.toLevel}
               </p>

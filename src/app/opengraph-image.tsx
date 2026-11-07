@@ -31,7 +31,7 @@ export default async function OpengraphImage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ fontSize: 26, letterSpacing: 8, textTransform: "uppercase", color: "#4f9dff" }}>
+          <div style={{ fontSize: 26, letterSpacing: 8, textTransform: "uppercase", color: "#2583ff" }}>
             A system for real-life progress
           </div>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, maxWidth: 900 }}>{SITE.tagline}</div>
