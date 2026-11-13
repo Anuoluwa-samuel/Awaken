@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { DeleteAccount } from "@/components/player/delete-account";
+import { PushToggle, SoundToggle } from "@/components/player/game-feedback-settings";
 import { SettingsForm } from "@/components/player/settings-form";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
+import { env } from "@/lib/env";
 import { getPlayerContext } from "@/server/player-context";
 import { getQuotaUsage } from "@/server/services/limits";
 
@@ -27,6 +29,13 @@ export default async function SettingsPage() {
               showOnLeaderboard: profile.showOnLeaderboard,
             }}
           />
+        </div>
+      </Panel>
+      <Panel>
+        <PanelHeader eyebrow="Feedback" title="Sound and reminders" />
+        <div className="grid gap-5 p-5 sm:p-6">
+          <SoundToggle />
+          {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? <PushToggle publicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} /> : null}
         </div>
       </Panel>
       <Panel>

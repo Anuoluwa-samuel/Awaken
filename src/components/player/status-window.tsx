@@ -2,6 +2,7 @@ import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
 import type { LevelProgress, RankProgress } from "@/lib/progression/levels";
 import { RankBadge, RankEmblem } from "./rank-emblem";
+import { StreakFlame } from "./streak-flame";
 
 export function StatusWindow({
   name,
@@ -9,6 +10,7 @@ export function StatusWindow({
   level,
   rank,
   streak,
+  freezeAvailable,
   questsDone,
   questsTotal,
   skillPoints,
@@ -18,6 +20,7 @@ export function StatusWindow({
   level: LevelProgress;
   rank: RankProgress;
   streak: number;
+  freezeAvailable: boolean;
   questsDone: number;
   questsTotal: number;
   /** Unspent skill points (spent in the skill tree, Phase 7). */
@@ -57,7 +60,9 @@ export function StatusWindow({
                 <span className="text-ink">{fmt.format(level.xpIntoLevel)}</span> / {fmt.format(level.xpForNext)} XP
               </p>
             </div>
-            <ProgressBar className="mt-2 h-2.5" value={level.ratio} label={`Experience toward level ${level.level + 1}`} />
+            <div data-xp-target>
+              <ProgressBar className="mt-2 h-2.5" value={level.ratio} label={`Experience toward level ${level.level + 1}`} />
+            </div>
             <p className="mt-1.5 text-xs text-ink-faint">
               {fmt.format(level.xpRemaining)} XP to level {level.level + 1}
             </p>
@@ -89,7 +94,12 @@ export function StatusWindow({
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Lifetime XP" value={fmt.format(level.totalXp)} />
             <Stat label="Today" value={`${questsDone}/${questsTotal}`} />
-            <Stat label="Day streak" value={String(streak)} />
+            <div className="rounded-md border border-line bg-surface/70 px-3 py-2">
+              <dt className="text-[11px] uppercase tracking-wider text-ink-faint">Day streak</dt>
+              <dd className="mt-0.5 text-lg">
+                <StreakFlame streak={streak} freezeAvailable={freezeAvailable} />
+              </dd>
+            </div>
             <Stat label="Skill points" value={String(skillPoints)} />
           </dl>
         </div>

@@ -95,9 +95,14 @@ export default async function AdminPage() {
     <div className="system-grid min-h-dvh">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Wordmark />
-        <Link href="/system" className="text-sm text-glow hover:underline">
-          Back to the app
-        </Link>
+        <nav className="flex items-center gap-4 text-sm">
+          <Link href="/admin/quests" className="text-glow hover:underline">
+            Quest pool
+          </Link>
+          <Link href="/system" className="text-glow hover:underline">
+            Back to the app
+          </Link>
+        </nav>
       </header>
       <main className="mx-auto grid max-w-6xl gap-8 px-4 pb-16 pt-2 sm:px-6">
         <div>

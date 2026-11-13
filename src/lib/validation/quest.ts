@@ -33,3 +33,13 @@ export const completeQuestSchema = z.object({
   questId: questIdSchema,
   evidenceNote: z.string().trim().max(QUEST_LIMITS.maxEvidenceLength).optional(),
 });
+
+/** A daily quest an admin adds to the shared rotation pool. */
+export const poolQuestSchema = z.object({
+  title: z.string().trim().min(3, "At least 3 characters").max(QUEST_LIMITS.maxTitleLength),
+  description: z.string().trim().max(QUEST_LIMITS.maxDescriptionLength),
+  category: z.enum(CATEGORIES),
+  difficulty: z.enum(DIFFICULTIES),
+  estimatedMinutes: z.number().int().min(1).max(240).nullable(),
+});
+export type PoolQuestInput = z.infer<typeof poolQuestSchema>;

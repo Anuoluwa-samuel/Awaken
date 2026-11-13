@@ -59,7 +59,7 @@ describe("CompletionPanel", () => {
           ...base,
           xp: { requested: 50, granted: 20, note: "Daily quest XP limit of 400 reached" },
           levelChange: applyXp(90, 20),
-          weekly: [{ challengeId: "w", title: "Finish three workouts", progress: 3, target: 3, completed: true, xpGranted: 100 }],
+          weekly: [{ challengeId: "w", title: "Finish three workouts", progress: 3, target: 3, completed: true, xpGranted: 100, isBoss: false }],
         }}
         onClose={() => {}}
       />,

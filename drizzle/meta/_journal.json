@@ -71,6 +71,13 @@
       "when": 1793650033296,
       "tag": "0009_usage_counter",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794561476043,
+      "tag": "0010_game_and_friends",
+      "breakpoints": true
     }
   ]
 }

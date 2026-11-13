@@ -32,10 +32,17 @@ const schema = z
     TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
     /** Vercel BotID on sign-up, sign-in and password reset. Off until verified on a deployment. */
     NEXT_PUBLIC_BOTID_ENABLED: bool,
+    /** Web push for the evening reminder (`pnpm push:keys` makes a pair). Both keys on, or both off. */
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(1).optional(),
   })
   .refine((e) => !e.NEXT_PUBLIC_TURNSTILE_SITE_KEY === !e.TURNSTILE_SECRET_KEY, {
     path: ["TURNSTILE_SECRET_KEY"],
     message: "Set both Turnstile keys or neither",
+  })
+  .refine((e) => !e.NEXT_PUBLIC_VAPID_PUBLIC_KEY === !e.VAPID_PRIVATE_KEY, {
+    path: ["VAPID_PRIVATE_KEY"],
+    message: "Set both VAPID keys or neither",
   })
   .refine((e) => !e.RESEND_API_KEY || !!e.EMAIL_FROM, {
     path: ["EMAIL_FROM"],

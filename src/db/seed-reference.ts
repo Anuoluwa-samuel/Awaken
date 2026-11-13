@@ -54,7 +54,7 @@ export async function seedReferenceData(db: AppDb) {
 
   await db
     .insert(schema.achievement)
-    .values(ACHIEVEMENTS.map((a) => ({ ...a, criteria: { ...a.criteria } })))
+    .values(ACHIEVEMENTS.map((a) => ({ ...a, criteria: { ...a.criteria }, hidden: a.hidden ?? false })))
     .onConflictDoUpdate({
       target: schema.achievement.code,
       set: {
@@ -64,6 +64,7 @@ export async function seedReferenceData(db: AppDb) {
         criteria: sql`excluded.criteria`,
         xpReward: sql`excluded.xp_reward`,
         titleReward: sql`excluded.title_reward`,
+        hidden: sql`excluded.hidden`,
       },
     });
 }

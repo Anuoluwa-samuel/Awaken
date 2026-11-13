@@ -14,6 +14,10 @@ import { db } from "@/db";
 import { PRIVATE_PAGE } from "@/lib/site";
 import { getPlayerContext } from "@/server/player-context";
 import { getShellSummary } from "@/server/services/dashboard";
+import { getDayStreak } from "@/server/services/streak";
+import { getBootSummary } from "@/server/services/boot";
+import { BootScreen } from "@/components/shell/boot-screen";
+import { StreakFlame } from "@/components/player/streak-flame";
 import { listNotifications } from "@/server/services/notifications";
 import { RankBadge } from "@/components/player/rank-emblem";
 
@@ -32,9 +36,12 @@ function initials(name: string) {
 export default async function SystemLayout({ children }: LayoutProps<"/system">) {
   const { user, profile, today } = await getPlayerContext();
   const cookieStore = await cookies();
-  const [summary, latest] = await Promise.all([
+  const clock = { today, timeZone: profile.timeZone, dayStartHour: profile.dayStartHour };
+  const [summary, latest, streak, boot] = await Promise.all([
     getShellSummary(db, user.id, today),
     listNotifications(db, user.id, { limit: 6 }),
+    getDayStreak(db, user.id, clock),
+    getBootSummary(db, user.id, clock),
   ]);
 
   return (
@@ -56,7 +63,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
         }
       >
         <div className="group-data-[collapsed=true]:hidden">
-          <PlayerSummary name={profile.displayName} summary={summary} />
+          <PlayerSummary name={profile.displayName} summary={summary} streak={streak.current} />
         </div>
         <SidebarNav unread={summary.unreadNotifications} />
         <p className="mt-auto px-1 text-[11px] leading-relaxed text-ink-faint group-data-[collapsed=true]:hidden">
@@ -82,6 +89,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
             <RankBadge rank={summary.rank.rank.id} />
           </div>
           <div className="flex items-center gap-3">
+            <StreakFlame streak={streak.current} size="sm" className="lg:hidden" />
             <Link
               href="/system/quests"
               className="hidden items-center gap-2 rounded-md border border-line px-2.5 py-1 text-xs text-ink-muted hover:border-line-strong hover:text-ink sm:flex"
@@ -104,6 +112,7 @@ export default async function SystemLayout({ children }: LayoutProps<"/system">)
       </div>
 
       <MobileNav unread={summary.unreadNotifications} />
+      <BootScreen boot={boot} streak={streak.current} name={profile.displayName} />
     </div>
     </CompletionProvider>
   );

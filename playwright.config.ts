@@ -50,6 +50,8 @@ export default defineConfig({
       SIGN_UP_MIN_SECONDS: "0",
       READ_CACHE_SECONDS: "0",
       CRON_SECRET: E2E_CRON_SECRET,
+      // Surprise double-XP quests would change a day's quest count at random.
+      SYSTEM_EVENTS: "off",
     },
   },
 });

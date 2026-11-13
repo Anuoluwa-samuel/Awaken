@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, X } from "lucide-react";
+import { Skull, Sparkles, X, Zap } from "lucide-react";
 import { useEffect } from "react";
 import { AchievementIcon } from "@/components/achievements/achievement-icon";
 import { ATTRIBUTE_INFO, type Attribute } from "@/lib/progression/config";
@@ -53,13 +53,36 @@ export function CompletionPanel({ result, onClose }: { result: CompletionResult;
             </p>
           ) : null}
           {result.xp.note ? <p className="mt-2 text-xs text-warning">{result.xp.note}</p> : null}
+          {result.combo ? (
+            <div className="mt-2 flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2">
+              <Zap aria-hidden className="size-4 shrink-0 text-success" />
+              <p className="text-sm">
+                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.15em] text-success">
+                  Daily combo
+                </span>{" "}
+                Every quest cleared today <span className="font-mono text-glow">+{result.combo.xp} XP</span>
+              </p>
+            </div>
+          ) : null}
           {result.weekly
             .filter((w) => w.completed && w.xpGranted > 0)
-            .map((w) => (
-              <p key={w.challengeId} className="mt-2 text-sm text-success">
-                Weekly challenge complete: {w.title} · +{w.xpGranted} XP
-              </p>
-            ))}
+            .map((w) =>
+              w.isBoss ? (
+                <div key={w.challengeId} className="mt-2 flex items-center gap-2 rounded-md border border-success/50 bg-success/10 px-3 py-2 shadow-[0_0_18px_-6px_#b6ff4a99]">
+                  <Skull aria-hidden className="size-4 shrink-0 text-success" />
+                  <p className="text-sm">
+                    <span className="font-display text-[11px] font-semibold uppercase tracking-[0.15em] text-success">
+                      Boss defeated
+                    </span>{" "}
+                    {w.title} <span className="font-mono text-glow">+{w.xpGranted} XP</span>
+                  </p>
+                </div>
+              ) : (
+                <p key={w.challengeId} className="mt-2 text-sm text-success">
+                  Weekly challenge complete: {w.title} · +{w.xpGranted} XP
+                </p>
+              ),
+            )}
           {result.achievements.map((a) => (
             <div key={a.code} className="mt-2 flex items-center gap-2 rounded-md border border-success/40 bg-success/10 px-3 py-2">
               <AchievementIcon name={a.icon} className="size-4 shrink-0 text-success" />

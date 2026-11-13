@@ -3,6 +3,7 @@ import {
   Award,
   Bell,
   BookOpen,
+  FileBarChart,
   Flag,
   GitBranch,
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   Timer,
   Trophy,
   UserRound,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,8 +35,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/system/goals", label: "Goals", icon: Flag },
   { href: "/system/skills", label: "Skills", icon: GitBranch },
   { href: "/system/achievements", label: "Achievements", icon: Award },
+  { href: "/system/friends", label: "Friends", icon: Users },
   { href: "/system/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/system/progress", label: "Progress", icon: Activity },
+  { href: "/system/report", label: "Weekly report", icon: FileBarChart },
   { href: "/system/notifications", label: "Notifications", icon: Bell, mobile: true },
   { href: "/system/settings", label: "Settings", icon: Settings },
   { href: "/guide", label: "Guide", icon: BookOpen },

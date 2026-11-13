@@ -15,6 +15,7 @@ export const DAILY_QUOTAS = {
   milestones_added: { limit: 100, label: "New milestones" },
   focus_started: { limit: 60, label: "Focus sessions started" },
   settings_saved: { limit: 30, label: "Settings changes" },
+  friend_requests: { limit: 20, label: "Friend requests" },
 } as const;
 export type QuotaMetric = keyof typeof DAILY_QUOTAS;
 

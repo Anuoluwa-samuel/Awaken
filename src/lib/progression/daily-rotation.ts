@@ -10,7 +10,7 @@ export const DEFAULT_DAILY_QUESTS = 5;
 export type RotationTemplate = { id: string; category: Category; difficulty: Difficulty };
 
 /** FNV-1a: a small, stable hash, used only to break ties unpredictably. */
-function hash(text: string) {
+export function hash(text: string) {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);

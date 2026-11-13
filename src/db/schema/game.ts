@@ -22,11 +22,13 @@ import {
   completionMethodEnum,
   difficultyEnum,
   focusStatusEnum,
+  friendshipStatusEnum,
   goalStatusEnum,
   questCadenceEnum,
   questKindEnum,
   questStatusEnum,
   rankEnum,
+  verificationStatusEnum,
   xpEventEnum,
 } from "./enums";
 
@@ -44,6 +46,13 @@ const updatedAt = () =>
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date());
+
+/** 8 characters from an alphabet without look-alikes (no 0/O, 1/I/L). */
+export function newFriendCode() {
+  const alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
 
 // ─── Player ──────────────────────────────────────────────────────────────────
 
@@ -63,6 +72,8 @@ export const playerProfile = pgTable(
     equippedTitle: text("equipped_title"),
     /** Listed on the global leaderboard. Off by default for under-18s (see createPlayer). */
     showOnLeaderboard: boolean("show_on_leaderboard").notNull().default(true),
+    /** Shared to add a friend. Random, so it reveals nothing about the player. */
+    friendCode: text("friend_code").notNull().unique().$defaultFn(newFriendCode),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -183,6 +194,8 @@ export const playerQuest = pgTable(
     status: questStatusEnum("status").notNull().default("available"),
     estimatedMinutes: smallint("estimated_minutes"),
     checklist: jsonb("checklist").$type<{ label: string; done: boolean }[]>(),
+    /** A surprise System event: an extra quest worth double XP, for its day only. */
+    isEvent: boolean("is_event").notNull().default(false),
     startedAt: timestamp("started_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -222,6 +235,8 @@ export const weeklyChallenge = pgTable(
     category: categoryEnum("category").notNull(),
     /** When true, completed quests of any category advance the challenge. */
     countsAnyCategory: boolean("counts_any_category").notNull().default(false),
+    /** The week's boss quest: a harder target for a bigger reward. */
+    isBoss: boolean("is_boss").notNull().default(false),
     target: smallint("target").notNull(),
     progress: smallint("progress").notNull().default(0),
     weekStart: date("week_start", { mode: "string" }).notNull(),
@@ -365,6 +380,8 @@ export const achievement = pgTable("achievement", {
   criteria: jsonb("criteria").$type<AchievementCriteria>().notNull(),
   xpReward: integer("xp_reward").notNull().default(0),
   titleReward: text("title_reward"),
+  /** Shown as "???" until unlocked. */
+  hidden: boolean("hidden").notNull().default(false),
 });
 
 export const playerAchievement = pgTable(
@@ -465,6 +482,100 @@ export const goalMilestone = pgTable(
       .on(t.playerQuestId)
       .where(sql`${t.playerQuestId} is not null`),
   ],
+);
+
+// ─── Friends ─────────────────────────────────────────────────────────────────
+
+/** One row per pair. A request is pending until the addressee accepts it. */
+export const friendship = pgTable(
+  "friendship",
+  {
+    id: id(),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    addresseeId: text("addressee_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: friendshipStatusEnum("status").notNull().default("pending"),
+    createdAt: createdAt(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  },
+  (t) => [
+    // Either direction counts as the same pair.
+    uniqueIndex("friendship_pair_unique").using(
+      "btree",
+      sql`least(${t.requesterId}, ${t.addresseeId})`,
+      sql`greatest(${t.requesterId}, ${t.addresseeId})`,
+    ),
+    index("friendship_addressee_idx").on(t.addresseeId, t.status),
+    index("friendship_requester_idx").on(t.requesterId, t.status),
+    check("friendship_not_self", sql`${t.requesterId} <> ${t.addresseeId}`),
+  ],
+);
+
+/** A one-tap "⚡" on a friend's level-up. No text, so it can't carry anything unkind. */
+export const cheer = pgTable(
+  "cheer",
+  {
+    id: id(),
+    fromUserId: text("from_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    toUserId: text("to_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    levelEventId: text("level_event_id")
+      .notNull()
+      .references(() => levelEvent.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("cheer_once_per_level").on(t.fromUserId, t.levelEventId),
+    index("cheer_to_idx").on(t.toUserId, t.createdAt),
+  ],
+);
+
+/** A friend confirming that a quest was really done. Confirmed ones earn a small bonus. */
+export const questVerification = pgTable(
+  "quest_verification",
+  {
+    id: id(),
+    playerQuestId: text("player_quest_id")
+      .notNull()
+      .unique()
+      .references(() => playerQuest.id, { onDelete: "cascade" }),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verifierId: text("verifier_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: verificationStatusEnum("status").notNull().default("pending"),
+    createdAt: createdAt(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("quest_verification_verifier_idx").on(t.verifierId, t.status),
+    index("quest_verification_requester_idx").on(t.requesterId, t.createdAt),
+    check("quest_verification_not_self", sql`${t.requesterId} <> ${t.verifierId}`),
+  ],
+);
+
+// ─── Push reminders ──────────────────────────────────────────────────────────
+
+/** A browser that agreed to receive the evening reminder. */
+export const pushSubscription = pgTable(
+  "push_subscription",
+  {
+    id: id(),
+    userId: userId(),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("push_subscription_user_idx").on(t.userId)],
 );
 
 // ─── Notifications & audit ───────────────────────────────────────────────────

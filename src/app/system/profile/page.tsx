@@ -1,5 +1,6 @@
 import { ChevronsUp, Crown } from "lucide-react";
 import type { Metadata } from "next";
+import { CardShare } from "@/components/player/card-share";
 import { RankEmblem } from "@/components/player/rank-emblem";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -44,6 +45,9 @@ export default async function ProfilePage() {
               <Stat label="Quests completed" value={fmt.format(history.questsCompleted)} />
               <Stat label="Skill points" value={String(summary.skillPoints)} />
             </dl>
+            <div className="mt-4">
+              <CardShare />
+            </div>
           </div>
         </div>
       </Panel>
@@ -91,7 +95,7 @@ export default async function ProfilePage() {
           <Panel>
             <PanelHeader eyebrow="Records" title="Rank-up history" />
             {history.rankUps.length === 0 ? (
-              <EmptyState icon={Crown}>No promotions yet. D-Rank begins at level 10.</EmptyState>
+              <EmptyState icon={Crown} title="Unranked hunter">No promotions yet. D-Rank begins at level 10.</EmptyState>
             ) : (
               <ol className="divide-y divide-line">
                 {history.rankUps.map((e) => (
@@ -111,7 +115,7 @@ export default async function ProfilePage() {
           <Panel>
             <PanelHeader eyebrow="Records" title="Level history" />
             {history.levels.length === 0 ? (
-              <EmptyState icon={ChevronsUp}>Level 2 is {fmt.format(level.xpRemaining)} XP away.</EmptyState>
+              <EmptyState icon={ChevronsUp} title="Growth pending">Level 2 is {fmt.format(level.xpRemaining)} XP away.</EmptyState>
             ) : (
               <ol className="max-h-96 divide-y divide-line overflow-y-auto">
                 {history.levels.map((e) => (

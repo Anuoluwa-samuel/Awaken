@@ -71,7 +71,7 @@ export default async function LeaderboardPage() {
       <Panel>
         <PanelHeader eyebrow={`Top ${LEADERBOARD_SIZE}`} title="Players by lifetime XP" />
         {rows.length === 0 ? (
-          <EmptyState icon={Trophy}>No one&apos;s ranked yet. Complete a quest to claim first place.</EmptyState>
+          <EmptyState icon={Trophy} title="The ranking is empty">No one&apos;s ranked yet. Complete a quest to claim first place.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed border-collapse text-left">

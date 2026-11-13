@@ -1,4 +1,4 @@
-import { Award, CalendarCheck, ChevronsUp, History, Repeat, ScrollText, Timer, Wrench, type LucideIcon } from "lucide-react";
+import { Award, CalendarCheck, ChevronsUp, History, Repeat, ScrollText, Timer, Wrench, Zap, type LucideIcon } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RANKS } from "@/lib/progression/config";
 import { cn } from "@/lib/utils/cn";
@@ -11,6 +11,7 @@ const XP_ICON: Record<Extract<ActivityItem, { kind: "xp" }>["eventType"], Lucide
   achievement_unlocked: Award,
   focus_completed: Timer,
   goal_completed: Award,
+  bonus: Zap,
   adjustment: Wrench,
 };
 
@@ -29,7 +30,7 @@ const rankLabel = (id: string) => RANKS.find((r) => r.id === id)?.label ?? id;
 
 export function ActivityFeed({ items, now = new Date() }: { items: ActivityItem[]; now?: Date }) {
   if (items.length === 0) {
-    return <EmptyState icon={History}>Complete a quest to record your first experience.</EmptyState>;
+    return <EmptyState icon={History} title="Log empty">Complete a quest to record your first experience.</EmptyState>;
   }
   return (
     <ol className="divide-y divide-line">

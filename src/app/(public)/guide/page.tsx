@@ -32,6 +32,8 @@ import { focusXp } from "@/lib/progression/focus";
 import { xpToReach } from "@/lib/progression/levels";
 import { pageMetadata } from "@/lib/site";
 import { LEADERBOARD_SIZE } from "@/server/services/leaderboard";
+import { FRIEND_RULES } from "@/server/services/friends";
+import { BONUS_RULES } from "@/lib/progression/bonuses";
 
 export const metadata: Metadata = pageMetadata({
   title: "Player guide",
@@ -45,7 +47,8 @@ const SECTIONS = [
   ["day", "How your day works"],
   ["quests", "Daily quests"],
   ["custom", "Your own quests"],
-  ["weekly", "Weekly challenges"],
+  ["weekly", "Weekly challenges and bosses"],
+  ["bonuses", "Combos, events and streaks"],
   ["habits", "Habits"],
   ["focus", "Focus sessions"],
   ["goals", "Goals"],
@@ -54,6 +57,7 @@ const SECTIONS = [
   ["skills", "Skills"],
   ["achievements", "Achievements and titles"],
   ["leaderboard", "Leaderboard"],
+  ["friends", "Friends"],
   ["progress", "Progress and notifications"],
   ["account", "Your account"],
   ["faq", "Common questions"],
@@ -255,6 +259,33 @@ export default function GuidePage() {
               {DIFFICULTY_XP.hard * WEEKLY_XP_MULTIPLIER} XP, and they don&apos;t count toward your daily limit.
               Unfinished challenges end on Sunday.
             </p>
+            <p>
+              Each week also brings one <strong>boss</strong>: a bigger elite challenge that pays{" "}
+              {BONUS_RULES.bossXpMultiplier}× a normal weekly reward ({DIFFICULTY_XP.elite * WEEKLY_XP_MULTIPLIER * BONUS_RULES.bossXpMultiplier} XP).
+              It sits at the top of the Weekly section on the <strong>Quests</strong> page.
+            </p>
+          </Section>
+
+          <Section id="bonuses">
+            <p>
+              <strong>Daily combo.</strong> Finish every daily quest of the day (at least {BONUS_RULES.comboMinQuests}) and
+              the System adds {Math.round(BONUS_RULES.comboShare * 100)}% of the day&apos;s quest XP on top, at least{" "}
+              {BONUS_RULES.comboMinimum} XP.
+            </p>
+            <p>
+              <strong>System events.</strong> On some days a surprise extra quest appears, marked &ldquo;System event&rdquo;.
+              It pays {BONUS_RULES.eventXpMultiplier}× XP and is optional: skipping it doesn&apos;t break your combo.
+            </p>
+            <p>
+              <strong>Streaks and the streak freeze.</strong> Your day streak counts days in a row with at least one
+              completed quest, and its flame grows at 7, 30 and 100 days. Once a week (Monday to Sunday) a missed day is
+              forgiven automatically, so one bad day doesn&apos;t wipe out a long streak. The snowflake next to the flame
+              shows whether this week&apos;s freeze is still available.
+            </p>
+            <p>
+              <strong>Weekly report.</strong> Each Monday the <strong>Weekly report</strong> page sums up last week: XP by
+              day, attributes gained, the boss, and which area to train next.
+            </p>
           </Section>
 
           <Section id="habits">
@@ -366,13 +397,14 @@ export default function GuidePage() {
 
           <Section id="achievements">
             <p>
-              Achievements unlock automatically, and some earn XP or a title. Choose which title to show on the{" "}
+              Achievements unlock automatically, and some earn XP or a title. A few are hidden: they show as
+              &ldquo;???&rdquo; until you stumble on them. Choose which title to show on the{" "}
               <strong>Achievements</strong> page.
             </p>
             <Table
               caption="Achievements"
               head={["Achievement", "How to earn it", "Reward"]}
-              rows={ACHIEVEMENTS.map((a) => [
+              rows={ACHIEVEMENTS.filter((a) => !a.hidden).map((a) => [
                 a.name,
                 a.description,
                 [a.xpReward ? `${a.xpReward} XP` : null, a.titleReward ? `“${a.titleReward}” title` : null]
@@ -395,12 +427,26 @@ export default function GuidePage() {
             </p>
           </Section>
 
+          <Section id="friends">
+            <p>
+              Add friends on the <strong>Friends</strong> page with their 8-character friend code. Friends see your name,
+              title, level, rank and level-ups, never your email or your quests.
+            </p>
+            <p>
+              You can <strong>cheer</strong> a friend&apos;s level-up with one tap, and ask a friend to{" "}
+              <strong>confirm</strong> a quest within {FRIEND_RULES.verifyWindowHours} hours of completing it, from the
+              quest&apos;s page. A confirmed quest earns {Math.round(BONUS_RULES.verifiedShare * 100)}% bonus XP.
+            </p>
+          </Section>
+
           <Section id="progress">
             <p>
               <strong>Status</strong> is your home screen: level, rank, attributes and recent activity.{" "}
               <strong>Progress</strong> shows charts of your XP, quests and focus time over 7 days up to a year.{" "}
               <strong>Notifications</strong> lists level-ups, rank-ups, reminders and security alerts inside the app.
-              AWAKEN doesn&apos;t send push notifications.
+              If you turn on the <strong>evening reminder</strong> in Settings, AWAKEN also sends at most one push
+              notification a day, around 7pm your time, and only when quests are still open. Sound effects can be turned
+              on there too.
             </p>
             <p>
               On a computer, use the button beside the logo to collapse the sidebar to icons and give your screen more

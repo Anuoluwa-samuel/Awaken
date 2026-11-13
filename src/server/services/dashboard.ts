@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   achievement,
   levelEvent,
@@ -13,8 +13,8 @@ import {
 import type { AppDb } from "@/db/types";
 import { ATTRIBUTES, type RankId } from "@/lib/progression/config";
 import { levelProgress, rankProgress } from "@/lib/progression/levels";
-import { activeDayStreak } from "@/lib/progression/streaks";
-import { addDays, type QuestDate } from "@/lib/time";
+import type { QuestDate } from "@/lib/time";
+import { getDayStreak } from "./streak";
 
 /** Compact numbers for the persistent shell (sidebar / top bar). */
 export async function getShellSummary(db: AppDb, userId: string, today: QuestDate) {
@@ -63,19 +63,13 @@ export async function getStatusWindow(
   clock: { today: QuestDate; timeZone: string; dayStartHour: number },
 ) {
   const { today } = clock;
-  const since = addDays(today, -400);
-  // A completion's quest day, computed in the player's zone from when it actually happened.
-  const completionDay = sql<string>`((${questCompletion.completedAt} at time zone ${clock.timeZone}) - make_interval(hours => ${clock.dayStartHour}))::date::text`;
-  const [attributes, todayQuests, activeDates, recentAchievements] = await Promise.all([
+  const [attributes, todayQuests, streak, recentAchievements] = await Promise.all([
     db.query.playerAttribute.findMany({ where: eq(playerAttribute.userId, userId) }),
     db.query.playerQuest.findMany({
       where: and(eq(playerQuest.userId, userId), eq(playerQuest.questDate, today), isNotNull(playerQuest.templateId)),
       orderBy: (q, { asc }) => [asc(q.createdAt)],
     }),
-    db
-      .selectDistinct({ date: completionDay })
-      .from(questCompletion)
-      .where(and(eq(questCompletion.userId, userId), gte(completionDay, since))),
+    getDayStreak(db, userId, clock),
     db
       .select({
         code: achievement.code,
@@ -94,7 +88,9 @@ export async function getStatusWindow(
   return {
     attributes: ATTRIBUTES.map((a) => ({ attribute: a, points: points[a] ?? 0 })),
     todayQuests,
-    streak: activeDayStreak(activeDates.map((d) => d.date), today),
+    streak: streak.current,
+    /** This week's streak freeze is still unused. */
+    freezeAvailable: streak.freezeAvailable,
     recentAchievements,
   };
 }

@@ -1,7 +1,8 @@
-import { and, asc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { playerProfile, playerSkill, questTemplate, weeklyChallenge } from "@/db/schema";
 import { SYSTEM_QUEST_TEMPLATES } from "@/db/seed-data";
 import type { AppDb } from "@/db/types";
+import { BONUS_RULES, pickBossKey } from "@/lib/progression/bonuses";
 import { DIFFICULTY_XP, WEEKLY_XP_MULTIPLIER, type Category } from "@/lib/progression/config";
 import { addDays, questDay, questDayBounds, weekStart, type QuestDate } from "@/lib/time";
 import { notify } from "./notifications";
@@ -20,9 +21,17 @@ export function weeklyTemplateKeysFor(
   return SYSTEM_QUEST_TEMPLATES.filter(
     (t) =>
       t.cadence === "weekly" &&
+      !t.weeklyBoss &&
       (t.requiredSkill
         ? unlockedSkills.has(t.requiredSkill)
         : t.weeklyDefault || focusAreas.includes(t.category)),
+  ).map((t) => t.key);
+}
+
+/** Bosses a player can face: the any-category boss, plus those in their focus areas. */
+export function bossKeysFor(focusAreas: readonly Category[]): string[] {
+  return SYSTEM_QUEST_TEMPLATES.filter(
+    (t) => t.weeklyBoss && (t.weeklyAnyCategory || focusAreas.includes(t.category)),
   ).map((t) => t.key);
 }
 
@@ -50,7 +59,14 @@ export async function ensureWeeklyChallenges(db: AppDb, userId: string, now = ne
       .select({ code: playerSkill.skillCode })
       .from(playerSkill)
       .where(eq(playerSkill.userId, userId));
-    const keys = weeklyTemplateKeysFor(profile.focusAreas, new Set(skills.map((s) => s.code)));
+    // One boss a week: changing focus areas mid-week doesn't summon a second one.
+    const [hasBoss] = await tx
+      .select({ id: weeklyChallenge.id })
+      .from(weeklyChallenge)
+      .where(and(eq(weeklyChallenge.userId, userId), eq(weeklyChallenge.weekStart, week), eq(weeklyChallenge.isBoss, true)))
+      .limit(1);
+    const boss = hasBoss ? null : pickBossKey(bossKeysFor(profile.focusAreas), userId, week);
+    const keys = [...weeklyTemplateKeysFor(profile.focusAreas, new Set(skills.map((s) => s.code))), ...(boss ? [boss] : [])];
     if (keys.length === 0) return week;
     const templates = await tx
       .select()
@@ -73,10 +89,13 @@ export async function ensureWeeklyChallenges(db: AppDb, userId: string, now = ne
             title: t.title,
             category: t.category,
             countsAnyCategory: anyCategory.has(t.key!),
+            isBoss: t.key === boss,
             target: t.weeklyTarget ?? 1,
             weekStart: week,
             deadlineAt: deadline,
-            xpReward: t.xpReward ?? DIFFICULTY_XP[t.difficulty] * WEEKLY_XP_MULTIPLIER,
+            xpReward:
+              t.xpReward ??
+              DIFFICULTY_XP[t.difficulty] * WEEKLY_XP_MULTIPLIER * (t.key === boss ? BONUS_RULES.bossXpMultiplier : 1),
           })),
         )
         .onConflictDoNothing({
@@ -87,7 +106,15 @@ export async function ensureWeeklyChallenges(db: AppDb, userId: string, now = ne
   });
 }
 
-export type WeeklyAdvance = { challengeId: string; title: string; progress: number; target: number; completed: boolean; xpGranted: number };
+export type WeeklyAdvance = {
+  challengeId: string;
+  title: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  xpGranted: number;
+  isBoss: boolean;
+};
 
 /**
  * Advances active challenges matching a completed quest. Must run inside the quest
@@ -143,7 +170,7 @@ export async function advanceWeeklyChallenges(
         await notify(tx, {
           userId,
           type: "weekly",
-          title: "Weekly challenge completed",
+          title: c.isBoss ? "Boss defeated" : "Weekly challenge completed",
           body: `${c.title} · +${grant.granted} XP`,
           href: "/system/quests",
           dedupeKey: `weekly:${c.id}`,
@@ -151,7 +178,7 @@ export async function advanceWeeklyChallenges(
         });
       }
     }
-    results.push({ challengeId: c.id, title: c.title, progress, target: c.target, completed: reached, xpGranted });
+    results.push({ challengeId: c.id, title: c.title, progress, target: c.target, completed: reached, xpGranted, isBoss: c.isBoss });
   }
   return results;
 }
@@ -159,6 +186,7 @@ export async function advanceWeeklyChallenges(
 export async function listWeeklyChallenges(db: AppDb, userId: string, week: QuestDate) {
   return db.query.weeklyChallenge.findMany({
     where: and(eq(weeklyChallenge.userId, userId), eq(weeklyChallenge.weekStart, week)),
-    orderBy: [asc(weeklyChallenge.createdAt)],
+    // The boss first: it's the week's headline.
+    orderBy: [desc(weeklyChallenge.isBoss), asc(weeklyChallenge.createdAt)],
   });
 }
