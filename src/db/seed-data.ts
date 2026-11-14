@@ -21,6 +21,8 @@ export type SystemTemplate = {
   requiredSkill?: string;
   /** Offered as a starter quest when the player picks this focus area. */
   starter?: boolean;
+  /** Weekly only: a boss quest. Each player gets one boss a week, instead of the regular pool. */
+  weeklyBoss?: boolean;
 };
 
 export const SYSTEM_QUEST_TEMPLATES: SystemTemplate[] = [
@@ -92,6 +94,16 @@ export const SYSTEM_QUEST_TEMPLATES: SystemTemplate[] = [
   { key: "weekly.study-4", title: "Complete four study sessions", description: "Four learning quests this week.", category: "learning", difficulty: "hard", attribute: "intelligence", cadence: "weekly", weeklyTarget: 4 },
   { key: "weekly.workout-3", title: "Finish three workouts", description: "Three fitness quests this week.", category: "fitness", difficulty: "hard", attribute: "strength", cadence: "weekly", weeklyTarget: 3 },
   { key: "weekly.tasks-5", title: "Complete five planned tasks", description: "Finish any five quests this week.", category: "organization", difficulty: "hard", attribute: "discipline", cadence: "weekly", weeklyTarget: 5, weeklyAnyCategory: true, weeklyDefault: true },
+  // Bosses: one a week per player, from the any-category boss or one in their focus areas.
+  { key: "weekly.boss-gauntlet", title: "Boss: The Gauntlet", description: "Complete 20 quests of any kind this week.", category: "organization", difficulty: "elite", attribute: "discipline", cadence: "weekly", weeklyTarget: 20, weeklyAnyCategory: true, weeklyBoss: true },
+  { key: "weekly.boss-iron", title: "Boss: Iron Body", description: "Complete 5 fitness quests this week.", category: "fitness", difficulty: "elite", attribute: "strength", cadence: "weekly", weeklyTarget: 5, weeklyBoss: true },
+  { key: "weekly.boss-archive", title: "Boss: The Archive", description: "Complete 6 learning quests this week.", category: "learning", difficulty: "elite", attribute: "intelligence", cadence: "weekly", weeklyTarget: 6, weeklyBoss: true },
+  { key: "weekly.boss-ladder", title: "Boss: The Ladder", description: "Complete 5 career quests this week.", category: "career", difficulty: "elite", attribute: "intelligence", cadence: "weekly", weeklyTarget: 5, weeklyBoss: true },
+  { key: "weekly.boss-forge", title: "Boss: The Forge", description: "Complete 5 creativity quests this week.", category: "creativity", difficulty: "elite", attribute: "creativity", cadence: "weekly", weeklyTarget: 5, weeklyBoss: true },
+  { key: "weekly.boss-vault", title: "Boss: The Vault", description: "Complete 5 money quests this week.", category: "finance", difficulty: "elite", attribute: "discipline", cadence: "weekly", weeklyTarget: 5, weeklyBoss: true },
+  { key: "weekly.boss-chaos", title: "Boss: Lord of Chaos", description: "Complete 6 organization quests this week.", category: "organization", difficulty: "elite", attribute: "discipline", cadence: "weekly", weeklyTarget: 6, weeklyBoss: true },
+  { key: "weekly.boss-tower", title: "Boss: The Lonely Tower", description: "Complete 4 social quests this week.", category: "social", difficulty: "elite", attribute: "vitality", cadence: "weekly", weeklyTarget: 4, weeklyBoss: true },
+  { key: "weekly.boss-storm", title: "Boss: The Inner Storm", description: "Complete 6 wellbeing quests this week.", category: "wellbeing", difficulty: "elite", attribute: "vitality", cadence: "weekly", weeklyTarget: 6, weeklyBoss: true },
   { key: "weekly.advanced-study", title: "Advanced study block", description: "Six learning quests this week.", category: "learning", difficulty: "elite", attribute: "intelligence", cadence: "weekly", weeklyTarget: 6, requiredSkill: "quick-learner" },
 ];
 
@@ -124,6 +136,8 @@ export type AchievementSeed = {
   criteria: AchievementCriteria;
   xpReward: number;
   titleReward: string | null;
+  /** Shown as "???" until unlocked. */
+  hidden?: boolean;
 };
 
 export const ACHIEVEMENTS: AchievementSeed[] = [
@@ -138,5 +152,18 @@ export const ACHIEVEMENTS: AchievementSeed[] = [
   { code: "rising", name: "Rising Hunter", description: "Reach D-Rank (level 10).", icon: "chevrons-up", criteria: { type: "level", threshold: 10 }, xpReward: 0, titleReward: "Rising Hunter" },
   { code: "scholar", name: "Scholar", description: "Complete 25 learning quests.", icon: "book-open", criteria: { type: "category_quests", threshold: 25, category: "learning" }, xpReward: 50, titleReward: "Scholar" },
   { code: "creator", name: "Creator", description: "Complete 25 creativity quests.", icon: "palette", criteria: { type: "category_quests", threshold: 25, category: "creativity" }, xpReward: 50, titleReward: "Creator" },
+  { code: "clean-sweep", name: "Clean Sweep", description: "Complete every daily quest in a day.", icon: "check-check", criteria: { type: "perfect_days", threshold: 1 }, xpReward: 15, titleReward: null },
+  { code: "flawless", name: "Flawless", description: "Complete every daily quest on 7 different days.", icon: "gem", criteria: { type: "perfect_days", threshold: 7 }, xpReward: 50, titleReward: "Flawless" },
+  { code: "boss-slayer", name: "Boss Slayer", description: "Defeat a weekly boss.", icon: "skull", criteria: { type: "bosses_defeated", threshold: 1 }, xpReward: 25, titleReward: null },
+  { code: "raid-leader", name: "Raid Leader", description: "Defeat 5 weekly bosses.", icon: "shield", criteria: { type: "bosses_defeated", threshold: 5 }, xpReward: 75, titleReward: "Raid Leader" },
+  { code: "on-fire", name: "On Fire", description: "Keep a 7-day streak.", icon: "flame", criteria: { type: "day_streak", threshold: 7 }, xpReward: 25, titleReward: null },
+  { code: "unbroken", name: "Unbroken", description: "Keep a 30-day streak.", icon: "flame", criteria: { type: "day_streak", threshold: 30 }, xpReward: 100, titleReward: "Unbroken" },
+  { code: "party-of-two", name: "Party of Two", description: "Add your first friend.", icon: "users", criteria: { type: "friends", threshold: 1 }, xpReward: 10, titleReward: null },
+  { code: "witnessed", name: "Witnessed", description: "Have 5 quests confirmed by a friend.", icon: "badge-check", criteria: { type: "verified_quests", threshold: 5 }, xpReward: 25, titleReward: "Witnessed" },
+  // Hidden: revealed when earned.
+  { code: "answer-the-call", name: "Answer the Call", description: "Complete a System event quest.", icon: "zap", criteria: { type: "event_quests", threshold: 1 }, xpReward: 15, titleReward: null, hidden: true },
+  { code: "dawn-walker", name: "Dawn Walker", description: "Complete 5 quests between 4 and 6 AM.", icon: "sunrise", criteria: { type: "early_quests", threshold: 5 }, xpReward: 25, titleReward: "Dawn Walker", hidden: true },
+  { code: "night-owl", name: "Night Owl", description: "Complete a quest between 11 PM and 4 AM.", icon: "moon", criteria: { type: "late_quests", threshold: 1 }, xpReward: 10, titleReward: null, hidden: true },
+  { code: "hype-squad", name: "Hype Squad", description: "Cheer on friends 10 times.", icon: "party-popper", criteria: { type: "cheers_given", threshold: 10 }, xpReward: 15, titleReward: null, hidden: true },
   { code: "elite", name: "Elite", description: "Reach level 35 (B-Rank).", icon: "crown", criteria: { type: "level", threshold: 35 }, xpReward: 0, titleReward: "Elite Hunter" },
 ];

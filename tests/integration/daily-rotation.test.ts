@@ -29,9 +29,10 @@ async function newPlayer(overrides: Partial<typeof settings> | { dailyTarget: nu
   await createPlayer(db, userId, { ...settings, ...overrides }, noon(DAY_ONE));
   return userId;
 }
+// The regular day, without the occasional System event quest (tested on its own below).
 const onDay = async (userId: string, date: string) => {
   await ensureDailyQuests(db, userId, noon(date));
-  return listQuestsForDay(db, userId, date);
+  return (await listQuestsForDay(db, userId, date)).filter((q) => !q.isEvent);
 };
 const titles = (quests: { title: string }[]) => quests.map((q) => q.title).sort();
 

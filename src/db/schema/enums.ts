@@ -38,6 +38,8 @@ export const xpEventEnum = pgEnum("xp_event", [
   "achievement_unlocked",
   "focus_completed",
   "goal_completed",
+  /** Extra rewards: daily combo, boss quests, system events, friend-verified quests. */
+  "bonus",
   "adjustment",
 ]);
 export const focusStatusEnum = pgEnum("focus_status", [
@@ -47,3 +49,5 @@ export const focusStatusEnum = pgEnum("focus_status", [
   "abandoned",
 ]);
 export const goalStatusEnum = pgEnum("goal_status", ["active", "completed", "archived"]);
+export const friendshipStatusEnum = pgEnum("friendship_status", ["pending", "accepted"]);
+export const verificationStatusEnum = pgEnum("verification_status", ["pending", "confirmed", "declined"]);

@@ -1,3 +1,4 @@
+import { consumeDaily, hitRateLimit } from "@/server/services/limits";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { notification, playerProgress, questCompletion, user, weeklyChallenge, xpLedger } from "@/db/schema";
@@ -53,6 +54,17 @@ describe.skipIf(!pg)("concurrent requests against real Postgres", () => {
     // Crossing level 2 produced exactly one notification.
     const notes = await db.query.notification.findMany({ where: eq(notification.userId, userId) });
     expect(notes.filter((n) => n.type === "level_up")).toHaveLength(1);
+  });
+
+  it("never lets parallel requests overshoot a rate limit or a daily quota", async () => {
+    const rule = { windowSeconds: 60, max: 5 };
+    const key = crypto.randomUUID();
+    const hits = await Promise.all(Array.from({ length: 30 }, () => hitRateLimit(db, key, rule)));
+    expect(hits.filter((h) => h.allowed)).toHaveLength(5);
+
+    const scope = crypto.randomUUID();
+    const takes = await Promise.all(Array.from({ length: 30 }, () => consumeDaily(db, scope, "m", 5)));
+    expect(takes.filter(Boolean)).toHaveLength(5);
   });
 
   it("counts every parallel grant, with no daily limit", async () => {

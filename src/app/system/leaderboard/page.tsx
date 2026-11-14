@@ -6,7 +6,8 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
 import { cn } from "@/lib/utils/cn";
 import { getPlayerContext } from "@/server/player-context";
-import { getLeaderboard, LEADERBOARD_SIZE, type LeaderboardRow } from "@/server/services/leaderboard";
+import { cachedRead } from "@/server/read-cache";
+import { getLeaderboard, getTopPlayers, LEADERBOARD_SIZE, type LeaderboardRow } from "@/server/services/leaderboard";
 import { RankBadge } from "@/components/player/rank-emblem";
 
 export const metadata: Metadata = { title: "Leaderboard" };
@@ -37,7 +38,9 @@ function Row({ row, isViewer }: { row: LeaderboardRow; isViewer: boolean }) {
 
 export default async function LeaderboardPage() {
   const { user, profile } = await getPlayerContext();
-  const { rows, total, viewer } = await getLeaderboard(db, user.id);
+  const { rows, total, viewer } = await getLeaderboard(db, user.id, LEADERBOARD_SIZE, () =>
+    cachedRead("leaderboard", () => getTopPlayers(db)),
+  );
   const viewerBelowList = viewer && !rows.some((row) => row.userId === user.id);
 
   return (
@@ -68,7 +71,7 @@ export default async function LeaderboardPage() {
       <Panel>
         <PanelHeader eyebrow={`Top ${LEADERBOARD_SIZE}`} title="Players by lifetime XP" />
         {rows.length === 0 ? (
-          <EmptyState icon={Trophy}>No one&apos;s ranked yet. Complete a quest to claim first place.</EmptyState>
+          <EmptyState icon={Trophy} title="The ranking is empty">No one&apos;s ranked yet. Complete a quest to claim first place.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed border-collapse text-left">
@@ -104,7 +107,7 @@ export default async function LeaderboardPage() {
       </Panel>
 
       <p className="text-xs leading-relaxed text-ink-faint">
-        XP is self-reported, so treat this as friendly competition. Players on equal XP share a place. You choose whether
+        XP is self-reported, so treat this as friendly competition. Players on equal XP share a place, and the list refreshes every few seconds. You choose whether
         you appear here in{" "}
         <Link href="/system/settings" className="hover:text-ink hover:underline">
           Settings

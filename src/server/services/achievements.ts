@@ -1,7 +1,9 @@
-import { and, asc, count, eq, gte, isNull } from "drizzle-orm";
+import { and, asc, count, eq, gte, isNull, or, sql } from "drizzle-orm";
 import {
   achievement,
+  cheer,
   focusSession,
+  friendship,
   goal,
   habit,
   habitCompletion,
@@ -12,7 +14,9 @@ import {
   playerSkill,
   playerTitle,
   questCompletion,
+  questVerification,
   weeklyChallenge,
+  xpLedger,
 } from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { criteriaProgress, meetsCriteria, type PlayerMetrics } from "@/lib/progression/achievements";
@@ -21,6 +25,7 @@ import { habitStats, scheduleOf } from "@/lib/progression/habits";
 import { addDays, questDay, type QuestDate } from "@/lib/time";
 import { notify } from "./notifications";
 import { grantXp, lockProgress } from "./rewards";
+import { getDayStreak } from "./streak";
 
 // Achievement engine — docs/ARCHITECTURE.md §6d.
 // Criteria are evaluated against persisted records only. Each unlock is guarded by the
@@ -51,6 +56,63 @@ async function playerToday(db: AppDb, userId: string, now: Date): Promise<QuestD
   });
   if (!profile) throw new AchievementError("PLAYER_NOT_FOUND", "Player profile not found");
   return questDay(now, profile.timeZone, profile.dayStartHour);
+}
+
+/** Counts behind the newer achievements: combos, bosses, events, time of day, streak and friends. */
+async function extraMetrics(db: AppDb, userId: string, today: QuestDate) {
+  const profile = await db.query.playerProfile.findFirst({
+    where: eq(playerProfile.userId, userId),
+    columns: { timeZone: true, dayStartHour: true },
+  });
+  const clock = { today, timeZone: profile?.timeZone ?? "UTC", dayStartHour: profile?.dayStartHour ?? 4 };
+  const localHour = sql<number>`extract(hour from ${questCompletion.completedAt} at time zone ${clock.timeZone})`;
+  const n = (rows: { n: number }[]) => Number(rows[0]?.n ?? 0);
+  const [perfect, bosses, events, early, late, friends, cheers, verified, streak] = await Promise.all([
+    db.select({ n: count() }).from(xpLedger).where(and(eq(xpLedger.userId, userId), eq(xpLedger.sourceType, "daily_combo"))),
+    db
+      .select({ n: count() })
+      .from(weeklyChallenge)
+      .where(and(eq(weeklyChallenge.userId, userId), eq(weeklyChallenge.isBoss, true), eq(weeklyChallenge.status, "completed"))),
+    db
+      .select({ n: count() })
+      .from(questCompletion)
+      .innerJoin(playerQuest, eq(playerQuest.id, questCompletion.playerQuestId))
+      .where(and(eq(questCompletion.userId, userId), eq(playerQuest.isEvent, true))),
+    db
+      .select({ n: count() })
+      .from(questCompletion)
+      .where(and(eq(questCompletion.userId, userId), sql`${localHour} >= 4 and ${localHour} < 6`)),
+    db
+      .select({ n: count() })
+      .from(questCompletion)
+      .where(and(eq(questCompletion.userId, userId), sql`(${localHour} >= 23 or ${localHour} < 4)`)),
+    db
+      .select({ n: count() })
+      .from(friendship)
+      .where(
+        and(
+          eq(friendship.status, "accepted"),
+          or(eq(friendship.requesterId, userId), eq(friendship.addresseeId, userId)),
+        ),
+      ),
+    db.select({ n: count() }).from(cheer).where(eq(cheer.fromUserId, userId)),
+    db
+      .select({ n: count() })
+      .from(questVerification)
+      .where(and(eq(questVerification.requesterId, userId), eq(questVerification.status, "confirmed"))),
+    getDayStreak(db, userId, clock),
+  ]);
+  return {
+    perfectDays: n(perfect),
+    bossesDefeated: n(bosses),
+    eventQuests: n(events),
+    earlyQuests: n(early),
+    lateQuests: n(late),
+    friends: n(friends),
+    cheersGiven: n(cheers),
+    verifiedQuests: n(verified),
+    dayStreak: streak.current,
+  };
 }
 
 export async function computeMetrics(db: AppDb, userId: string, today: QuestDate): Promise<PlayerMetrics> {
@@ -95,6 +157,7 @@ export async function computeMetrics(db: AppDb, userId: string, today: QuestDate
   }
 
   return {
+    ...(await extraMetrics(db, userId, today)),
     questsCompleted: quests,
     level: progress?.level ?? 1,
     categoryQuests: Object.fromEntries(byCategory.map((r) => [r.category, r.n])) as Partial<Record<Category, number>>,

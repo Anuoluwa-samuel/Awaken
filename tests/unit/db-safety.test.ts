@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { assertDatabaseChangeAllowed, assertLocalDatabase, isLocalDatabase } from "@/db/safety";
 
-const REMOTE = "postgresql://u:p@ep-example-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
+const REMOTE = "postgresql://u:p@db.example.com:5432/awaken?sslmode=require";
 const LOCAL = "postgres://awaken:awaken@localhost:54350/awaken";
 
 afterEach(() => {
@@ -30,7 +30,7 @@ describe("database safety guards", () => {
   });
 
   it("never includes the connection string in its errors", () => {
-    expect(() => assertLocalDatabase(REMOTE, "tests")).not.toThrow(/neon\.tech|u:p/);
-    expect(() => assertDatabaseChangeAllowed(REMOTE, "db:seed")).not.toThrow(/neon\.tech|u:p/);
+    expect(() => assertLocalDatabase(REMOTE, "tests")).not.toThrow(/example\.com|u:p/);
+    expect(() => assertDatabaseChangeAllowed(REMOTE, "db:seed")).not.toThrow(/example\.com|u:p/);
   });
 });

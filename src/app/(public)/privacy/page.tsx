@@ -3,6 +3,7 @@ import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { Contact, LegalPage } from "@/components/legal/legal-page";
 import { LEGAL } from "@/lib/legal";
+import { READ_NOTIFICATION_RETENTION_DAYS } from "@/server/services/maintenance";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
@@ -53,7 +54,10 @@ export default function PrivacyPage() {
       <h3>Security records</h3>
       <ul>
         <li>For each signed-in session: your IP address and browser type, so you can be kept signed in safely.</li>
-        <li>Short-lived counters keyed by IP address that limit how often sign-up and sign-in can be tried.</li>
+        <li>
+          Short-lived counters keyed by IP address or account that limit how quickly the site can be used, and daily
+          counts of things you create. Email addresses in these counters are stored only in scrambled form.
+        </li>
         <li>
           A count of recent wrong passwords for an email address, used to pause sign-in after repeated failures.
         </li>
@@ -88,11 +92,8 @@ export default function PrivacyPage() {
 
       <h2>Site analytics</h2>
       <p>
-        To see which pages are used and how fast they load, we use Vercel Web Analytics and Speed Insights. They
-        count page views and measure loading times without cookies, without recording what you type or how you
-        move around a page (no session replays), and without identifying you across other websites. Before anything
-        is sent, we strip personal details from page addresses: email addresses, password-reset links and the ids of
-        your quests, habits and goals. Visitors are counted using a short-lived hash that changes every day.
+        We don&apos;t use any site analytics or page-view tracking. Nothing about which pages you visit, how you
+        move around the app, or how fast it loads for you is sent anywhere outside the service itself.
       </p>
 
       <h2>Cookies and local storage</h2>
@@ -107,17 +108,20 @@ export default function PrivacyPage() {
       <p>We use a small number of providers to run AWAKEN. They handle your data only on our instructions:</p>
       <ul>
         <li>
-          <strong>Vercel</strong> hosts the app, keeps short-lived request logs and provides the cookie-free site
-          analytics described above.
+          {/* TODO before publishing: confirm the Oracle Cloud region this VM runs in and name it here. */}
+          <strong>Oracle Cloud Infrastructure</strong> hosts the server the app and database run on.
         </li>
         <li>
-          <strong>Neon</strong> hosts the database and a separate backup copy, in the United States.
-        </li>
-        <li>
-          <strong>GitHub</strong> stores encrypted database backups for up to 30 days.
+          <strong>Cloudflare</strong> routes every request to the app (so our server never accepts connections
+          directly from the internet) and provides DNS. It sees your IP address and the pages you request, the same
+          as any provider sitting in front of a website.
         </li>
         <li>
           <strong>Resend</strong> delivers account emails, when email is switched on.
+        </li>
+        <li>
+          <strong>Cloudflare Turnstile</strong> additionally checks for automated traffic on sign-up, password reset
+          and repeated failed sign-ins, when switched on.
         </li>
       </ul>
       <p>
@@ -132,7 +136,9 @@ export default function PrivacyPage() {
           to recover from data loss, are removed within 30 days.
         </li>
         <li>Sessions: until you sign out, or 14 days after you last used AWAKEN.</li>
-        <li>Rate-limit counters: minutes. Wrong-password counts: cleared when you sign in or reset your password.</li>
+        <li>Rate-limit counters: up to a day. Daily usage counts: about a month.</li>
+        <li>Wrong-password counts: cleared when you sign in or reset your password, and removed after a month otherwise.</li>
+        <li>Notifications you&apos;ve read: {READ_NOTIFICATION_RETENTION_DAYS} days.</li>
       </ul>
 
       <h2>Your rights</h2>

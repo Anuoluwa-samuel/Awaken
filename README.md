@@ -68,5 +68,5 @@ tests/unit|integration|e2e
 
 ## Status
 
-All 11 phases are done. Deploy with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (Vercel + Neon + Resend);
-what isn't built or verified yet is in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+All 12 phases are done. Deploy with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (self-hosted: Docker +
+Cloudflare Tunnel + Resend); what isn't built or verified yet is in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).

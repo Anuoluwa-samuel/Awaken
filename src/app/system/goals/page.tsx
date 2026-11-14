@@ -43,7 +43,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/system/goa
 
       {goals.length === 0 ? (
         <Panel>
-          <EmptyState icon={Flag}>
+          <EmptyState icon={Flag} title="No objective set">
             No goals yet. <Link href="/system/goals/new" className="text-glow hover:underline">Set your first one</Link>.
           </EmptyState>
         </Panel>

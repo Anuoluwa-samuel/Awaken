@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActivityFeed } from "@/components/player/activity-feed";
 import { AttributeList } from "@/components/player/attribute-list";
+import { AttributeRadar } from "@/components/player/attribute-radar";
 import { StatusWindow } from "@/components/player/status-window";
 import { QuestRow } from "@/components/quests/quest-row";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
         level={summary.level}
         rank={summary.rank}
         streak={status.streak}
+        freezeAvailable={status.freezeAvailable}
         questsDone={summary.questsDone}
         questsTotal={summary.questsTotal}
         skillPoints={summary.skillPoints}
@@ -57,7 +59,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
             }
           />
           {status.todayQuests.length === 0 ? (
-            <EmptyState icon={ScrollText}>No quests scheduled today. Rest days count too.</EmptyState>
+            <EmptyState icon={ScrollText} title="No orders today">No quests scheduled today. Rest days count too.</EmptyState>
           ) : (
             <ul className="divide-y divide-line">
               {status.todayQuests.slice(0, 5).map((q) => (
@@ -69,6 +71,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
 
         <Panel>
           <PanelHeader eyebrow="Attributes" title="Player stats" />
+          <AttributeRadar attributes={status.attributes} />
           <AttributeList attributes={status.attributes} />
           <p className="border-t border-line px-5 py-3 text-xs text-ink-faint">
             Game mechanics for tracking your effort — not measurements of ability or health.
@@ -92,7 +95,7 @@ export default async function StatusPage({ searchParams }: PageProps<"/system">)
         <Panel>
           <PanelHeader eyebrow="Records" title="Recent achievements" />
           {status.recentAchievements.length === 0 ? (
-            <EmptyState icon={Award}>No achievements yet. Your first one is a single quest away.</EmptyState>
+            <EmptyState icon={Award} title="Record empty">No achievements yet. Your first one is a single quest away.</EmptyState>
           ) : (
             <ul className="divide-y divide-line">
               {status.recentAchievements.map((a) => (

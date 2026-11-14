@@ -1,0 +1,80 @@
+# Self-hosted production: the app + its own Postgres + its own Cloudflare Tunnel, on a VM that
+# also runs other projects (Playbot, yito-shot-it) the same way — no shared reverse proxy, no
+# open ports: each project is its own isolated Docker network with its own `cloudflared`
+# container making an outgoing-only connection to Cloudflare. See docs/DEPLOYMENT.md. Run with:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# --env-file is required even though the app's own variables come from `env_file:` below:
+# it's what fills in ${POSTGRES_PASSWORD} in this file itself (Compose only reads a plain
+# ".env" for that by default, and this project's local dev already owns that name for
+# `pnpm dev`).
+services:
+  awaken-app:
+    build: .
+    container_name: awaken-app
+    restart: unless-stopped
+    env_file: .env.production
+    expose:
+      - "3000"
+    depends_on:
+      awaken-db:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # Outgoing-only connection to Cloudflare; nothing on this VM accepts inbound traffic on 80/443.
+  # Create the tunnel in Cloudflare (Zero Trust → Networks → Tunnels), name it "awaken", add a
+  # public hostname getawaken.com.ng → HTTP → awaken-app:3000, and put its token in
+  # CLOUDFLARE_TUNNEL_TOKEN. See docs/DEPLOYMENT.md.
+  awaken-cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    container_name: awaken-cloudflared
+    command: ["tunnel", "--no-autoupdate", "run"]
+    restart: unless-stopped
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env.production}
+    networks:
+      - internal
+
+  # Not part of the running stack (profile "tools": `docker compose … up -d` skips it).
+  # Built from the `builder` Dockerfile stage, which — unlike awaken-app's final image — still
+  # has devDependencies and the repo source, so `pnpm db:deploy` / `admin:grant` / `db:check` work:
+  #   docker compose -f docker-compose.prod.yml --env-file .env.production run --rm awaken-tools pnpm db:deploy
+  awaken-tools:
+    build:
+      context: .
+      target: builder
+    profiles: ["tools"]
+    env_file: .env.production
+    networks:
+      - internal
+
+  awaken-db:
+    image: postgres:17-alpine
+    container_name: awaken-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-awaken}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-awaken}
+    volumes:
+      - awaken_pgdata:/var/lib/postgresql/data
+    # Loopback-only: reachable from scripts/backup-local.sh running on the VM itself (docs/BACKUPS.md),
+    # never from the internet or other containers outside the "internal" network.
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-awaken}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  awaken_pgdata:
+
+networks:
+  # Everything for this project — app, db, tunnel — on one network, isolated from Playbot's
+  # and yito-shot-it's. Nothing outside this project can reach awaken-db.
+  internal: {}

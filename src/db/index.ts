@@ -11,12 +11,12 @@ function createClient() {
   // `pnpm dev` and tests must never be able to reach a real database.
   if (process.env.NODE_ENV !== "production") assertLocalDatabase(env.DATABASE_URL, "the app in development");
   const url = new URL(env.DATABASE_URL);
-  // Neon's pooled endpoint (host contains "-pooler") runs PgBouncer in transaction mode,
-  // which doesn't support named prepared statements.
+  // A serverless host with a PgBouncer-style pooler (host contains "-pooler") runs transaction
+  // mode, which doesn't support named prepared statements. Not the case for a plain self-hosted
+  // Postgres container, which supports them.
   const pooled = url.hostname.includes("-pooler");
   return postgres(env.DATABASE_URL, {
-    // Serverless functions each hold their own pool: keep it tiny on Vercel.
-    max: env.DATABASE_POOL_MAX ?? (process.env.VERCEL ? 1 : 10),
+    max: env.DATABASE_POOL_MAX ?? 10,
     prepare: !pooled,
     idle_timeout: 20,
     connect_timeout: 10,

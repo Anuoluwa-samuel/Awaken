@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { Captcha, captchaFetchOptions } from "@/components/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,9 @@ export function LoginForm({ next }: { next: string }) {
   // Seconds left on an account lockout (null = not locked); `lockKey` restarts the countdown.
   const [lockedFor, setLockedFor] = useState<number | null>(null);
   const [lockKey, setLockKey] = useState(0);
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const unlock = useCallback(() => setLockedFor(null), []);
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -28,7 +32,15 @@ export function LoginForm({ next }: { next: string }) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
-    const { error } = await authClient.signIn.email(values);
+    const { error } = await authClient.signIn.email({ ...values, ...captchaFetchOptions(captchaToken) });
+    if (error?.code === "CAPTCHA_REQUIRED") {
+      // Only appears after repeated wrong passwords. Ask, then let them submit again.
+      setShowCaptcha(true);
+      setCaptchaReset((n) => n + 1);
+      setError(error.message ?? "Please complete the check to continue.");
+      return;
+    }
+    if (error) setCaptchaReset((n) => n + 1);
     if (error?.code === "ACCOUNT_LOCKED") {
       setLockedFor(Number((error as { retryAfterSeconds?: unknown }).retryAfterSeconds) || 600);
       setLockKey((k) => k + 1);
@@ -66,6 +78,7 @@ export function LoginForm({ next }: { next: string }) {
           {...form.register("password")}
         />
       </Field>
+      {showCaptcha ? <Captcha onToken={setCaptchaToken} resetKey={captchaReset} /> : null}
       <Button type="submit" size="lg" disabled={isSubmitting || !!lockedFor} className="mt-2">
         <LogIn aria-hidden />
         {isSubmitting ? "Connecting…" : "Enter the System"}

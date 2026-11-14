@@ -12,20 +12,21 @@ Items marked **Phase 11** must be resolved before a public deployment.
 
 ## Deployment (resolved in Phase 11, needs your accounts)
 
-Production is prepared for **Vercel + Neon + Resend** — see [DEPLOYMENT.md](DEPLOYMENT.md). What
-remains is on your side: creating the accounts, verifying a sending domain, and entering the
-secrets. Specifically:
+Production is prepared for **self-hosted Docker + Cloudflare Tunnel + Resend**, on the same Oracle
+Cloud VM as Playbot and yito-shot-it — see [DEPLOYMENT.md](DEPLOYMENT.md). What remains is on your
+side: creating the tunnel, verifying a sending domain, and entering the secrets. Specifically:
 
 - **Email** is sent through Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set. Without them
   (e.g. no sending domain yet), production runs with verification off and the password-reset page
   says resets aren't available; it refuses to start if verification is required.
-- **Rate limiting** keys on Vercel's `x-vercel-forwarded-for` (not spoofable) and stores counters
-  in Postgres, shared across instances. Off Vercel, `AUTH_IP_HEADER` must name a header your proxy
-  overwrites; with none, all clients share one bucket.
-- **Preview deployments** need their own Neon branch and `BETTER_AUTH_URL`; sign-in on an arbitrary
-  preview URL fails the origin check by design.
-- **Not done here:** the actual account creation and first deploy, custom-domain DNS, and an
-  uptime monitor on `/api/health`.
+- **Rate limiting** keys on `AUTH_IP_HEADER` (`.env.production.example` sets it to
+  `cf-connecting-ip`), which only resists spoofing because the app isn't reachable any other way —
+  see `docker-compose.prod.yml`'s `expose`, not `ports`, on `awaken-app`. A different setup without
+  Cloudflare Tunnel in front would need a different trusted header, set deliberately.
+- **Backups rely on the VM:** there's no provider-managed point-in-time restore for a self-hosted
+  Postgres container, so [BACKUPS.md](BACKUPS.md)'s nightly encrypted dump is the only net.
+- **Not done here:** the actual VM provisioning, custom-domain DNS, and an uptime monitor on
+  `/api/health`.
 
 ## Account lockout
 
@@ -38,9 +39,25 @@ secrets. Specifically:
 
 ## Backups
 
-- **Nothing is backed up until you finish [BACKUPS.md](BACKUPS.md)** (a second database and three GitHub secrets).
-  The nightly job has been tested on temporary databases, but not yet against Neon.
-- **The backup database can be up to a day behind.** Neon's instant restore covers the gap.
+- **Nothing is backed up until you finish [BACKUPS.md](BACKUPS.md)** (a passphrase and a systemd
+  timer on the VM). The script has been tested, but not yet against a real production restore.
+- **The most recent backup can be up to a day behind.** There's no point-in-time restore in
+  between — a self-hosted Postgres container doesn't have Neon's instant-restore equivalent.
+
+## Limits and costs
+
+- **The request throttle is per server instance,** so with more than one `awaken-app` container
+  running it's approximate (there's only one in the default setup). It's a cheap first filter; the
+  exact limits behind it are shared in Postgres.
+- **Limits can't be set per player or changed without a redeploy.** There's no admin screen for them,
+  and no paid tier with higher ones.
+- **The app can't see your actual bills.** The dashboard shows emails, sign-ups and database size, not
+  what the VM or Resend charge. Oracle's Always Free tier doesn't bill unless you exceed it; check
+  anyway (DEPLOYMENT.md).
+- **Throttling relies on `AUTH_IP_HEADER`** naming a header your reverse proxy overwrites, not
+  appends to — see the deployment note above.
+- **If Cloudflare is down,** captcha is skipped for that request, and logged. Rate limits and lockout
+  still apply.
 
 ## Leaderboard fairness
 
@@ -49,17 +66,16 @@ secrets. Specifically:
   which holds that route to about 4,800 XP a day; removing those too would let anyone reach first
   place instantly. There are no moderation tools yet to remove a cheater or an offensive display
   name: set `show_on_leaderboard = false` on their `player_profile` row, or delete the account.
-- **Admin analytics** count from the database only; page views are in Vercel Analytics. The dashboard
-  recomputes on every load, which is fine at this size but would need caching with many thousands
-  of players.
+- **Admin analytics** count from the database only; there's no separate page-view analytics product
+  wired in (Vercel's was dropped along with Vercel itself). The dashboard recomputes on every load,
+  which is fine at this size but would need caching with many thousands of players.
 
 ## Spam protection
 
-- **BotID is off by default** (`NEXT_PUBLIC_BOTID_ENABLED`) until it's verified on a Vercel
-  deployment; see DEPLOYMENT.md. Without it, a browser-driving bot that waits 3 s, skips the
-  honeypot and uses a real email domain can still sign up, at most 5 times an hour per IP.
-- **Password-reset emails** are limited per IP (3 per 5 min), not per recipient, so someone using
-  many IPs could send repeated reset emails to one address. Matters once email is switched on.
+- **There's no bot-challenge layer** (Vercel BotID was Vercel-only, and was removed with the move
+  off Vercel). A browser-driving bot that waits 3 s, skips the honeypot and uses a real email
+  domain can still sign up, at most 5 times an hour per IP. Cloudflare Turnstile (captcha, see
+  DEPLOYMENT.md) is the recommended mitigation here.
 - The throwaway-domain list is short and hand-kept (`spam-rules.ts`).
 
 ## Legal & privacy

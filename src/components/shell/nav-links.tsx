@@ -36,6 +36,7 @@ export function SidebarNav({ unread }: { unread: number }) {
           <Link
             key={href}
             href={href}
+            prefetch={false}
             aria-current={active ? "page" : undefined}
             title={label}
             className={cn(
@@ -72,6 +73,7 @@ export function MobileNav({ unread }: { unread: number }) {
             <li key={href}>
               <Link
                 href={href}
+                prefetch={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",

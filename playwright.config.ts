@@ -12,6 +12,7 @@ const base = new URL(process.env.DATABASE_URL ?? "postgres://awaken:awaken@local
 assertLocalDatabase(base.toString(), "the browser tests");
 base.pathname = "/awaken_e2e";
 export const E2E_DATABASE_URL = base.toString();
+export const E2E_CRON_SECRET = "e2e-cron-secret-0000";
 export const E2E_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "e2e-secret-e2e-secret-e2e-secret-e2e";
 const PORT = 3200;
 
@@ -47,6 +48,10 @@ export default defineConfig({
       REQUIRE_EMAIL_VERIFICATION: "false",
       // Playwright fills the sign-up form instantly; the minimum fill time is unit-tested instead.
       SIGN_UP_MIN_SECONDS: "0",
+      READ_CACHE_SECONDS: "0",
+      CRON_SECRET: E2E_CRON_SECRET,
+      // Surprise double-XP quests would change a day's quest count at random.
+      SYSTEM_EVENTS: "off",
     },
   },
 });

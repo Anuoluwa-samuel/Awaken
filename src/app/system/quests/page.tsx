@@ -61,7 +61,7 @@ export default async function QuestsPage({ searchParams }: PageProps<"/system/qu
       <Panel>
         <PanelHeader eyebrow={today} title="Daily quests" />
         {scheduled.length === 0 ? (
-          <EmptyState icon={ScrollText}>No quests scheduled today. Rest days count too.</EmptyState>
+          <EmptyState icon={ScrollText} title="No orders today">No quests scheduled today. Rest days count too.</EmptyState>
         ) : (
           <ul className="divide-y divide-line">
             {scheduled.map((q) => (
@@ -75,7 +75,7 @@ export default async function QuestsPage({ searchParams }: PageProps<"/system/qu
         <Panel>
           <PanelHeader eyebrow="Your quests" title="Custom quests" />
           {oneOff.length === 0 ? (
-            <EmptyState icon={Swords}>
+            <EmptyState icon={Swords} title="Your own board is clear">
               No open custom quests. <Link href="/system/quests/new" className="text-glow hover:underline">Create one</Link>.
             </EmptyState>
           ) : (
@@ -90,7 +90,7 @@ export default async function QuestsPage({ searchParams }: PageProps<"/system/qu
         <Panel>
           <PanelHeader eyebrow={`Week of ${week}`} title="Weekly challenges" />
           {weekly.length === 0 ? (
-            <EmptyState icon={Trophy}>No weekly challenges this week.</EmptyState>
+            <EmptyState icon={Trophy} title="Standing by">No weekly challenges yet. New ones arrive each Monday.</EmptyState>
           ) : (
             <ul className="divide-y divide-line">
               {weekly.map((c) => (

@@ -11,7 +11,16 @@ export type AchievementCriteria =
   | { type: "habit_checkins"; threshold: number }
   | { type: "skills_unlocked"; threshold: number }
   | { type: "goals_completed"; threshold: number }
-  | { type: "focus_sessions"; threshold: number };
+  | { type: "focus_sessions"; threshold: number }
+  | { type: "perfect_days"; threshold: number }
+  | { type: "bosses_defeated"; threshold: number }
+  | { type: "event_quests"; threshold: number }
+  | { type: "early_quests"; threshold: number }
+  | { type: "late_quests"; threshold: number }
+  | { type: "day_streak"; threshold: number }
+  | { type: "friends"; threshold: number }
+  | { type: "cheers_given"; threshold: number }
+  | { type: "verified_quests"; threshold: number };
 
 /** Everything criteria can look at, computed from persisted records. */
 export type PlayerMetrics = {
@@ -26,6 +35,20 @@ export type PlayerMetrics = {
   goalsCompleted: number;
   /** Completed (full-length) focus sessions. */
   focusSessions: number;
+  /** Days on which every daily quest was completed (daily combos earned). */
+  perfectDays: number;
+  bossesDefeated: number;
+  eventQuests: number;
+  /** Quests completed between 4 and 6 AM, player's local time. */
+  earlyQuests: number;
+  /** Quests completed between 11 PM and 4 AM, player's local time. */
+  lateQuests: number;
+  /** Current day streak, freezes included. */
+  dayStreak: number;
+  friends: number;
+  cheersGiven: number;
+  /** The player's quests that a friend confirmed. */
+  verifiedQuests: number;
 };
 
 export function metricFor(c: AchievementCriteria, m: PlayerMetrics): number {
@@ -48,6 +71,24 @@ export function metricFor(c: AchievementCriteria, m: PlayerMetrics): number {
       return m.goalsCompleted;
     case "focus_sessions":
       return m.focusSessions;
+    case "perfect_days":
+      return m.perfectDays;
+    case "bosses_defeated":
+      return m.bossesDefeated;
+    case "event_quests":
+      return m.eventQuests;
+    case "early_quests":
+      return m.earlyQuests;
+    case "late_quests":
+      return m.lateQuests;
+    case "day_streak":
+      return m.dayStreak;
+    case "friends":
+      return m.friends;
+    case "cheers_given":
+      return m.cheersGiven;
+    case "verified_quests":
+      return m.verifiedQuests;
   }
 }
 

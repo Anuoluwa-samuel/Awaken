@@ -17,6 +17,15 @@ const zero: PlayerMetrics = {
   skillsUnlocked: 0,
   goalsCompleted: 0,
   focusSessions: 0,
+  perfectDays: 0,
+  bossesDefeated: 0,
+  eventQuests: 0,
+  earlyQuests: 0,
+  lateQuests: 0,
+  dayStreak: 0,
+  friends: 0,
+  cheersGiven: 0,
+  verifiedQuests: 0,
 };
 
 describe("achievement criteria", () => {

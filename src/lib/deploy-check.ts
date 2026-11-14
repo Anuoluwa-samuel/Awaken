@@ -20,16 +20,21 @@ export function checkProductionEnv(env: Record<string, string | undefined>): Fin
   else if (isLocal(db.hostname)) add("fail", "DATABASE_URL", "points at a local database");
   else {
     add("pass", "DATABASE_URL", "remote Postgres URL");
-    if (db.searchParams.get("sslmode") !== "require") add("warn", "DATABASE_URL", "add ?sslmode=require (Neon requires TLS)");
-    if (db.hostname.includes(".neon.tech") && !db.hostname.includes("-pooler")) {
-      add("warn", "DATABASE_URL", "use Neon's pooled connection string (host contains -pooler) for the app");
+    // A bare Docker Compose service name (e.g. "awaken-db") has no dot and never leaves the host,
+    // so it needs no TLS; a real hostname reachable over the internet does.
+    if (db.hostname.includes(".") && db.searchParams.get("sslmode") !== "require") {
+      add("warn", "DATABASE_URL", "add ?sslmode=require — this host looks reachable over the public internet");
     }
   }
 
   const mig = url(env.MIGRATION_DATABASE_URL);
-  if (!mig) add("warn", "MIGRATION_DATABASE_URL", "not set — migrations will use DATABASE_URL; prefer Neon's direct (unpooled) URL");
-  else if (mig.hostname.includes("-pooler")) add("warn", "MIGRATION_DATABASE_URL", "should be the direct (unpooled) URL, not -pooler");
-  else add("pass", "MIGRATION_DATABASE_URL", "direct connection for migrations");
+  if (!mig) {
+    add("warn", "MIGRATION_DATABASE_URL", "not set — migrations will use DATABASE_URL (fine for a self-hosted database with no separate pooler)");
+  } else if (mig.hostname.includes("-pooler")) {
+    add("warn", "MIGRATION_DATABASE_URL", "looks like a pooled connection string (host contains -pooler); migrations need a direct one");
+  } else {
+    add("pass", "MIGRATION_DATABASE_URL", "direct connection for migrations");
+  }
 
   const secret = env.BETTER_AUTH_SECRET ?? "";
   if (secret.length < 32) add("fail", "BETTER_AUTH_SECRET", "missing or shorter than 32 characters");

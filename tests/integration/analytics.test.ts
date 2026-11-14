@@ -40,7 +40,8 @@ describe("getAnalytics", () => {
 
     const a = await getAnalytics(db, userId, { from: "2026-10-25", to: "2026-10-28", today: "2026-10-28", ...tz });
     expect(a.xp.map((d) => d.date)).toEqual(["2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"]);
-    expect(a.xp.find((d) => d.date === "2026-10-26")!.xp).toBe(q26.xpReward + 10); // + First Blood
+    // + First Blood, + Night Owl (hidden: completed at 03:30 local).
+    expect(a.xp.find((d) => d.date === "2026-10-26")!.xp).toBe(q26.xpReward + 10 + 10);
     expect(a.xp.find((d) => d.date === "2026-10-27")!.xp).toBe(0);
     expect(a.totals.questsCompleted).toBe(1);
 

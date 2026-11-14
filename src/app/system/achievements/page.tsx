@@ -34,6 +34,8 @@ export default async function AchievementsPage() {
         <ul className="grid content-start gap-3 sm:grid-cols-2">
           {achievements.map((a) => {
             const done = !!a.unlockedAt;
+            // Hidden achievements stay a mystery until they're earned.
+            const secret = a.hidden && !done;
             return (
               <li key={a.code}>
                 <Panel className={cn("flex h-full gap-4 p-4", !done && "opacity-80")} glow={done}>
@@ -47,15 +49,19 @@ export default async function AchievementsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="font-display font-semibold tracking-wide">
-                      {a.name}
-                      <span className="sr-only">{done ? " — unlocked" : " — locked"}</span>
+                      {secret ? "???" : a.name}
+                      <span className="sr-only">{done ? " — unlocked" : secret ? " — hidden achievement" : " — locked"}</span>
                     </h2>
-                    <p className="text-sm text-ink-muted">{a.description}</p>
+                    <p className="text-sm text-ink-muted">
+                      {secret ? "A hidden achievement. The System reveals it when you earn it." : a.description}
+                    </p>
+                    {secret ? null : (
                     <p className="mt-1 text-xs text-ink-faint">
                       {[a.xpReward ? `+${a.xpReward} XP` : null, a.titleReward ? `Title: ${a.titleReward}` : null]
                         .filter(Boolean)
                         .join(" · ") || "Badge"}
                     </p>
+                    )}
                     {done ? (
                       <p className="mt-2 text-xs text-success">
                         Unlocked{" "}
@@ -63,7 +69,7 @@ export default async function AchievementsPage() {
                           {a.unlockedAt!.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                         </time>
                       </p>
-                    ) : (
+                    ) : secret ? null : (
                       <div className="mt-2 flex items-center gap-2">
                         <ProgressBar className="h-1.5" value={a.progress.ratio} label={`${a.name} progress`} />
                         <span className="shrink-0 font-mono text-xs text-ink-muted">

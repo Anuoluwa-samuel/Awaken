@@ -65,7 +65,7 @@ export default async function ProgressPage({ searchParams }: PageProps<"/system/
 
       {nothing ? (
         <Panel>
-          <EmptyState icon={Activity}>No recorded activity in this range yet. Charts fill in as you complete quests, habits and focus sessions.</EmptyState>
+          <EmptyState icon={Activity} title="No data to analyse">No recorded activity in this range yet. Charts fill in as you complete quests, habits and focus sessions.</EmptyState>
         </Panel>
       ) : null}
 

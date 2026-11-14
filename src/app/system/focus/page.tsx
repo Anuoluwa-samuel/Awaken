@@ -67,7 +67,7 @@ export default async function FocusPage() {
           <Panel>
             <PanelHeader eyebrow="Log" title="Session history" />
             {summary.recent.length === 0 ? (
-              <EmptyState icon={Timer}>No sessions yet. Your first one is a click away.</EmptyState>
+              <EmptyState icon={Timer} title="No training logged">No sessions yet. Your first one is a click away.</EmptyState>
             ) : (
               <ol className="divide-y divide-line">
                 {summary.recent.map((s) => (

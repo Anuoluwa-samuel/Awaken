@@ -56,7 +56,7 @@ export default async function HabitsPage({ searchParams }: PageProps<"/system/ha
 
       {habits.length === 0 ? (
         <Panel>
-          <EmptyState icon={Repeat}>
+          <EmptyState icon={Repeat} title="No routines registered">
             No habits yet. <Link href="/system/habits/new" className="text-glow hover:underline">Track your first one</Link>.
           </EmptyState>
         </Panel>

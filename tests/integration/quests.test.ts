@@ -236,8 +236,12 @@ describe("weekly challenges", () => {
     const userId = await newPlayer(["fitness"]);
     await ensureWeeklyChallenges(db, userId, NOON);
     await ensureWeeklyChallenges(db, userId, NOON);
-    const weekly = await listWeeklyChallenges(db, userId, "2026-10-26");
+    const all = await listWeeklyChallenges(db, userId, "2026-10-26");
+    const weekly = all.filter((w) => !w.isBoss);
     expect(weekly.map((w) => w.title).sort()).toEqual(["Complete five planned tasks", "Finish three workouts"]);
+    // Plus exactly one boss, listed first, worth twice a regular elite challenge.
+    expect(all.filter((w) => w.isBoss)).toHaveLength(1);
+    expect(all[0]).toMatchObject({ isBoss: true, xpReward: 400 });
     expect(weekly.find((w) => w.title === "Finish three workouts")).toMatchObject({ target: 3, xpReward: 100 });
   });
 
@@ -250,7 +254,7 @@ describe("weekly challenges", () => {
       const workout = (await dailyQuests(userId, day)).find((q) => q.category === "fitness" && q.difficulty !== "hard")!;
       await completeQuest(db, userId, workout.id, { now });
     }
-    const [workouts] = (await listWeeklyChallenges(db, userId, "2026-10-26")).filter((w) => w.category === "fitness");
+    const [workouts] = (await listWeeklyChallenges(db, userId, "2026-10-26")).filter((w) => w.category === "fitness" && !w.isBoss);
     expect(workouts).toMatchObject({ progress: 3, status: "completed" });
     expect(workouts.rewardClaimedAt).not.toBeNull();
 
@@ -300,9 +304,9 @@ describe("weekly challenges", () => {
     const userId = await newPlayer(["fitness", "learning"]);
     const learning = (await dailyQuests(userId)).find((q) => q.category === "learning")!;
     const r = await completeQuest(db, userId, learning.id, { now: NOON });
-    expect(r.weekly.map((w) => w.title).sort()).toEqual(["Complete five planned tasks", "Complete four study sessions"]);
+    expect(r.weekly.filter((w) => !w.isBoss).map((w) => w.title).sort()).toEqual(["Complete five planned tasks", "Complete four study sessions"]);
     const workouts = (await db.query.weeklyChallenge.findMany({ where: eq(weeklyChallenge.userId, userId) })).find(
-      (w) => w.category === "fitness",
+      (w) => w.category === "fitness" && !w.isBoss,
     );
     expect(workouts?.progress).toBe(0);
   });

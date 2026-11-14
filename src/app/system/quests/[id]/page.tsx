@@ -10,6 +10,9 @@ import { ATTRIBUTE_INFO, CATEGORY_INFO } from "@/lib/progression/config";
 import { questIdSchema } from "@/lib/validation/quest";
 import { getPlayerContext } from "@/server/player-context";
 import { getQuestDetail } from "@/server/services/quests";
+import { getVerificationOptions } from "@/server/services/friends";
+import { VerifyRequest } from "@/components/friends/verify-request";
+import { BONUS_RULES } from "@/lib/progression/bonuses";
 
 export const metadata: Metadata = { title: "Quest" };
 
@@ -29,6 +32,9 @@ export default async function QuestDetailPage({ params }: PageProps<"/system/que
   if (!detail) notFound();
   const { quest, completion, xp, attributes } = detail;
   const open = quest.status === "available" || quest.status === "in_progress";
+  const { verification, friends, canAsk } = completion
+    ? await getVerificationOptions(db, user.id, quest.id, completion.completedAt)
+    : { verification: null, friends: [], canAsk: false };
 
   return (
     <div className="grid max-w-3xl gap-6">
@@ -80,6 +86,23 @@ export default async function QuestDetailPage({ params }: PageProps<"/system/que
             </p>
             {completion.evidenceNote ? (
               <blockquote className="border-l-2 border-line-strong pl-3 text-ink-muted">{completion.evidenceNote}</blockquote>
+            ) : null}
+            {verification ? (
+              <p className="flex flex-wrap items-center gap-2">
+                <Badge tone={verification.status === "confirmed" ? "success" : verification.status === "pending" ? "glow" : "muted"}>
+                  {verification.status === "confirmed" ? "Witnessed" : verification.status === "pending" ? "Awaiting confirmation" : "Not confirmed"}
+                </Badge>
+                <span className="text-ink-muted">
+                  {verification.status === "pending" ? `Asked ${verification.verifierName}.` : `By ${verification.verifierName}.`}
+                </span>
+              </p>
+            ) : canAsk ? (
+              <div className="rounded-md border border-line bg-surface/60 p-3">
+                <VerifyRequest questId={quest.id} friends={friends} />
+                <p className="mt-2 text-xs text-ink-faint">
+                  A confirmed quest earns {Math.round(BONUS_RULES.verifiedShare * 100)}% bonus XP (at least {BONUS_RULES.verifiedMinimum}).
+                </p>
+              </div>
             ) : null}
             <ul className="grid gap-1.5">
               {xp.map((e) => (

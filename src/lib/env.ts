@@ -15,12 +15,32 @@ const schema = z
     RESEND_API_KEY: z.string().startsWith("re_").optional(),
     /** Verified sender, e.g. `AWAKEN <system@your-domain.com>`. */
     EMAIL_FROM: z.string().min(3).optional(),
-    /** Connection pool size per server instance (Vercel functions: keep it small). */
+    /** Connection pool size per server instance. */
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).optional(),
     /** Minimum seconds between opening the sign-up form and submitting it (anti-bot). Tests use 0. */
     SIGN_UP_MIN_SECONDS: z.coerce.number().min(0).max(60).default(3),
-    /** Vercel BotID on sign-up, sign-in and password reset. Off until verified on a deployment. */
-    NEXT_PUBLIC_BOTID_ENABLED: bool,
+    /** Most account emails to send per UTC day, site-wide. Resend's free plan allows 100. 0 stops email. */
+    EMAIL_DAILY_BUDGET: z.coerce.number().int().min(0).default(90),
+    /** Most new accounts per UTC day, site-wide. 0 pauses sign-ups. */
+    SIGNUP_DAILY_BUDGET: z.coerce.number().int().min(0).default(500),
+    /** Seconds to reuse leaderboard and admin figures before re-querying. Tests use 0. */
+    READ_CACHE_SECONDS: z.coerce.number().int().min(0).default(30),
+    /** Protects the daily maintenance job. The GitHub Actions workflow sends it; see docs/DEPLOYMENT.md. */
+    CRON_SECRET: z.string().min(16).optional(),
+    /** Cloudflare Turnstile (captcha). Both keys on, or both off. */
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
+    TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+    /** Web push for the evening reminder (`pnpm push:keys` makes a pair). Both keys on, or both off. */
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  })
+  .refine((e) => !e.NEXT_PUBLIC_TURNSTILE_SITE_KEY === !e.TURNSTILE_SECRET_KEY, {
+    path: ["TURNSTILE_SECRET_KEY"],
+    message: "Set both Turnstile keys or neither",
+  })
+  .refine((e) => !e.NEXT_PUBLIC_VAPID_PUBLIC_KEY === !e.VAPID_PRIVATE_KEY, {
+    path: ["VAPID_PRIVATE_KEY"],
+    message: "Set both VAPID keys or neither",
   })
   .refine((e) => !e.RESEND_API_KEY || !!e.EMAIL_FROM, {
     path: ["EMAIL_FROM"],

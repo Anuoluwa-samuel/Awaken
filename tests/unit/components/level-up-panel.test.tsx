@@ -79,6 +79,19 @@ describe("CompletionProvider", () => {
     fireEvent.click(screen.getByText("go"));
     expect(screen.getByRole("heading", { name: "Level up" })).toBeInTheDocument();
   });
+  it("shows the full-screen ceremony instead of the panel for a new rank", () => {
+    render(
+      <CompletionProvider>
+        <Trigger r={result(applyXp(0, xpToReach(10)))} />
+      </CompletionProvider>,
+    );
+    fireEvent.click(screen.getByText("go"));
+    expect(screen.getByRole("dialog", { name: "D-Rank" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Level up" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept the rank" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Accept the rank" }));
+    expect(screen.queryByRole("dialog", { name: "D-Rank" })).not.toBeInTheDocument();
+  });
 });
 
 describe("RankEmblem", () => {
@@ -88,4 +101,5 @@ describe("RankEmblem", () => {
     rerender(<RankEmblem rank="S" />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
 });

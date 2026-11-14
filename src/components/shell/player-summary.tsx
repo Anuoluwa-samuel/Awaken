@@ -1,10 +1,11 @@
 import { ProgressBar } from "@/components/ui/progress";
 import type { getShellSummary } from "@/server/services/dashboard";
 import { RankBadge } from "@/components/player/rank-emblem";
+import { StreakFlame } from "@/components/player/streak-flame";
 
 type Summary = Awaited<ReturnType<typeof getShellSummary>>;
 
-export function PlayerSummary({ name, summary }: { name: string; summary: Summary }) {
+export function PlayerSummary({ name, summary, streak }: { name: string; summary: Summary; streak: number }) {
   const { level, rank } = summary;
   return (
     <div className="rounded-lg border border-line bg-surface/70 p-3">
@@ -20,13 +21,18 @@ export function PlayerSummary({ name, summary }: { name: string; summary: Summar
           {level.xpIntoLevel}/{level.xpForNext} XP
         </span>
       </div>
-      <ProgressBar className="mt-1.5" value={level.ratio} label={`Experience toward level ${level.level + 1}`} />
-      <p className="mt-2.5 text-xs text-ink-muted">
+      <div data-xp-target>
+        <ProgressBar className="mt-1.5" value={level.ratio} label={`Experience toward level ${level.level + 1}`} />
+      </div>
+      <div className="mt-2.5 flex items-center justify-between gap-2">
+      <p className="text-xs text-ink-muted">
         Daily quests{" "}
         <span className="font-mono text-ink">
           {summary.questsDone}/{summary.questsTotal}
         </span>
       </p>
+      <StreakFlame streak={streak} size="sm" />
+      </div>
     </div>
   );
 }

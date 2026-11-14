@@ -5,18 +5,31 @@ import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import { emailTransportAvailable, sendEmail } from "@/lib/email";
+import { emailTransportAvailable, sendBudgetedEmail } from "@/lib/email";
 import { env } from "@/lib/env";
+import { CAPTCHA_AFTER_FAILED_SIGN_INS, CAPTCHA_HEADER, verifyCaptcha } from "@/lib/auth/captcha";
 import { checkSignUpConsent, type ConsentBody } from "@/lib/auth/consent-rules";
 import { describeWait, normaliseEmail } from "@/lib/auth/lockout-rules";
 import { checkSignUpSpam, type SpamBody } from "@/lib/auth/spam-rules";
 import { LEGAL } from "@/lib/legal";
 import { purgeAccountExtras } from "@/server/services/account";
-import { clearLockout, recordFailure, reserveAttempt } from "@/server/services/lockout";
+import { consumeDaily, SITE_SCOPE } from "@/server/services/limits";
+import { clearLockout, failedSignIns, recordFailure, reserveAttempt } from "@/server/services/lockout";
 
 const SIGN_IN = "/sign-in/email";
 const SIGN_UP = "/sign-up/email";
+const PASSWORD_RESET = "/request-password-reset";
 const DELETE_USER = "/delete-user";
+
+/** Throws unless the request carries a valid captcha. Does nothing when captcha is off. */
+async function requireCaptcha(headers: Headers | undefined) {
+  if (!env.TURNSTILE_SECRET_KEY) return;
+  const result = await verifyCaptcha(headers?.get(CAPTCHA_HEADER), env.TURNSTILE_SECRET_KEY);
+  if (result === "unavailable") console.warn("[captcha] Cloudflare unavailable: letting the request through");
+  if (result === "missing" || result === "rejected") {
+    throw new APIError("BAD_REQUEST", { code: "CAPTCHA_REQUIRED", message: "Please complete the check to continue." });
+  }
+}
 
 function lockedError(retryAfterSeconds: number) {
   return new APIError(
@@ -56,7 +69,7 @@ export const auth = betterAuth({
     },
     resetPasswordTokenExpiresIn: 60 * 30,
     sendResetPassword: async ({ user, url }) => {
-      await sendEmail({
+      await sendBudgetedEmail({
         to: user.email,
         subject: "AWAKEN — reset your password",
         text: `A password reset was requested for your account.\n\nReset it here (valid 30 minutes):\n${url}\n\nIf this wasn't you, ignore this email.`,
@@ -67,7 +80,7 @@ export const auth = betterAuth({
     sendOnSignUp: emailTransportAvailable,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendEmail({
+      await sendBudgetedEmail({
         to: user.email,
         subject: "AWAKEN — verify your email",
         text: `Confirm your email to secure your account:\n${url}`,
@@ -111,8 +124,8 @@ export const auth = betterAuth({
   },
   rateLimit: {
     enabled: true,
-    // Counters live in Postgres so every server instance (and every short-lived Vercel
-    // function) shares them; in-memory counters would reset per instance.
+    // Counters live in Postgres so every server instance shares them; in-memory counters
+    // would reset per instance (and matters more with more than one `awaken-app` container).
     storage: "database",
     window: 60,
     max: 100,
@@ -129,13 +142,10 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
-    // Client IP for rate limiting — see docs/DEPLOYMENT.md. On Vercel the platform sets
-    // x-vercel-forwarded-for itself (clients can't spoof it). Elsewhere, AUTH_IP_HEADER names the
-    // header your proxy overwrites; locally Better Auth falls back to 127.0.0.1.
+    // Client IP for rate limiting — see docs/DEPLOYMENT.md. AUTH_IP_HEADER names the header your
+    // reverse proxy overwrites (never appends to); locally Better Auth falls back to 127.0.0.1.
     ipAddress: {
-      ipAddressHeaders: process.env.VERCEL
-        ? ["x-vercel-forwarded-for"]
-        : [process.env.AUTH_IP_HEADER || "x-forwarded-for"],
+      ipAddressHeaders: [process.env.AUTH_IP_HEADER || "x-forwarded-for"],
     },
     database: { generateId: () => crypto.randomUUID() },
   },
@@ -161,11 +171,23 @@ export const auth = betterAuth({
         }
         const consent = checkSignUpConsent(ctx.body as ConsentBody | undefined);
         if (!consent.ok) throw new APIError("BAD_REQUEST", { code: consent.code, message: consent.message });
+        await requireCaptcha(ctx.headers);
+        if (!(await consumeDaily(db, SITE_SCOPE, "signups", env.SIGNUP_DAILY_BUDGET))) {
+          throw new APIError("SERVICE_UNAVAILABLE", { code: "SIGN_UPS_PAUSED", message: "New sign-ups are paused for today. Please try again tomorrow." });
+        }
+        return;
+      }
+      if (ctx.path === PASSWORD_RESET) {
+        await requireCaptcha(ctx.headers);
         return;
       }
       if (ctx.path !== SIGN_IN) return;
       const email = normaliseEmail((ctx.body as { email?: unknown } | undefined)?.email);
       if (!email) return;
+      // Normal sign-ins never see a captcha; repeated wrong passwords do.
+      if (env.TURNSTILE_SECRET_KEY && (await failedSignIns(db, email)) >= CAPTCHA_AFTER_FAILED_SIGN_INS) {
+        await requireCaptcha(ctx.headers);
+      }
       const decision = await reserveAttempt(db, email);
       if (!decision.allowed) throw lockedError(decision.retryAfterSeconds);
     }),

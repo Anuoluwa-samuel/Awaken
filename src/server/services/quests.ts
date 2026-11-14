@@ -18,6 +18,7 @@ import {
   QUEST_LIMITS,
   type Attribute,
 } from "@/lib/progression/config";
+import { BONUS_RULES, comboBonus, isEventDay, pickEventTemplate } from "@/lib/progression/bonuses";
 import { DEFAULT_DAILY_QUESTS, pickDailyQuests } from "@/lib/progression/daily-rotation";
 import { levelProgress, rankProgress, type LevelProgress, type RankProgress } from "@/lib/progression/levels";
 import { canTransition, OPEN_STATUSES } from "@/lib/progression/quest-state";
@@ -56,6 +57,9 @@ async function loadClock(tx: AppDb, userId: string, now: Date) {
   return { ...profile, today, ...questDayBounds(today, profile.timeZone, profile.dayStartHour) };
 }
 
+/** SYSTEM_EVENTS=off pauses surprise events (tests use it so a day's quest count is predictable). */
+const systemEventsOn = () => process.env.SYSTEM_EVENTS !== "off";
+
 // ─── Daily rollover ──────────────────────────────────────────────────────────
 
 /**
@@ -77,7 +81,7 @@ async function pickTodaysRotation(
     .from(playerQuest)
     .where(and(eq(playerQuest.userId, userId), eq(playerQuest.kind, "daily"), eq(playerQuest.questDate, today), notFixed))
     .limit(1);
-  if (existing) return [];
+  if (existing) return { rotating: [], event: null };
 
   const history = await tx
     .select({ templateId: playerQuest.templateId, last: sql<string>`max(${playerQuest.questDate})::text` })
@@ -85,7 +89,7 @@ async function pickTodaysRotation(
     .where(and(eq(playerQuest.userId, userId), eq(playerQuest.kind, "daily"), lt(playerQuest.questDate, today)))
     .groupBy(playerQuest.templateId);
   // Day one keeps the welcoming starter set chosen at setup. Rotation begins on day two.
-  if (history.length === 0 && starters.length > 0) return starters;
+  if (history.length === 0 && starters.length > 0) return { rotating: starters, event: null };
 
   const profile = await tx.query.playerProfile.findFirst({
     where: eq(playerProfile.userId, userId),
@@ -112,7 +116,14 @@ async function pickTodaysRotation(
     seed: `${userId}:${today}`,
     lastSeen: new Map(history.map((row) => [row.templateId!, row.last])),
   });
-  return ids.map((id) => pool.find((t) => t.id === id)!);
+  // Some days bring a System event: one extra quest, worth double XP, for today only.
+  // Not one of today's, nor one from the player's last day, so it's a genuine surprise.
+  const lastDay = history.reduce((latest, row) => (row.last > latest ? row.last : latest), "");
+  const recent = history.filter((row) => row.last === lastDay).map((row) => row.templateId!);
+  const event = systemEventsOn() && isEventDay(userId, today)
+    ? pickEventTemplate(pool, new Set([...ids, ...recent]), profile?.focusAreas ?? [], `${userId}:${today}:event`)
+    : null;
+  return { rotating: ids.map((id) => pool.find((t) => t.id === id)!), event };
 }
 
 /**
@@ -178,14 +189,15 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
     const isFixed = (t: typeof questTemplate.$inferSelect) => !!t.ownerUserId || !!t.requiredSkill || linkedIds.has(t.id);
     const fixed = scheduled.filter(({ template }) => isFixed(template)).map(({ template }) => template);
     const starters = scheduled.filter(({ template }) => !isFixed(template)).map(({ template }) => template);
-    const rotating = await pickTodaysRotation(tx, userId, today, starters, fixed);
-    const todays = [...fixed, ...rotating];
+    const { rotating, event } = await pickTodaysRotation(tx, userId, today, starters, fixed);
+    const todays = [...fixed, ...rotating, ...(event ? [event] : [])];
 
     if (todays.length > 0) {
       const inserted = await tx
         .insert(playerQuest)
         .values(
           todays.map((t) => ({
+            isEvent: t === event,
             userId,
             templateId: t.id,
             // Player-authored recurring quests stay "custom" so custom safeguards apply.
@@ -195,7 +207,7 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
             category: t.category,
             difficulty: t.difficulty,
             attribute: t.attribute,
-            xpReward: resolveQuestXp(t.difficulty, t.xpReward),
+            xpReward: resolveQuestXp(t.difficulty, t.xpReward) * (t === event ? BONUS_RULES.eventXpMultiplier : 1),
             estimatedMinutes: t.estimatedMinutes,
             questDate: today,
             dueAt: end,
@@ -215,6 +227,17 @@ export async function ensureDailyQuests(db: AppDb, userId: string, now = new Dat
           dedupeKey: `daily:${userId}:${today}`,
           createdAt: now,
         });
+        if (event) {
+          await notify(tx, {
+            userId,
+            type: "system",
+            title: "System event",
+            body: `A surprise quest appeared: ${event.title}. Double XP, today only.`,
+            href: "/system/quests",
+            dedupeKey: `event:${userId}:${today}`,
+            createdAt: now,
+          });
+        }
       }
     }
 
@@ -321,6 +344,8 @@ export type CompletionResult = {
   achievements: UnlockedAchievement[];
   /** Set when this completion finished a goal through its linked milestone. */
   goal?: GoalCompletion | null;
+  /** Set when this completion finished every daily quest of the day. */
+  combo?: { xp: number } | null;
   player: { level: LevelProgress; rank: RankProgress };
 };
 
@@ -457,7 +482,11 @@ export async function completeQuest(
     // 9. Goal milestones linked to this quest (may complete a goal and grant its reward).
     const goalCompleted = await recordMilestonesForQuest(tx, userId, quest.id, now);
 
-    // 10. Achievements (their XP can level the player up, so measure the level change after).
+    // 10. Daily combo: this was the last open daily quest of the day.
+    const combo =
+      quest.templateId && quest.questDate === clock.today ? await grantDailyCombo(tx, userId, clock.today, now) : null;
+
+    // 11. Achievements (their XP can level the player up, so measure the level change after).
     const achievements = [...(goalCompleted?.achievements ?? []), ...(await evaluateAchievements(tx, userId, now))];
 
     // Level change across everything this completion granted (quest + weekly + achievements).
@@ -478,9 +507,41 @@ export async function completeQuest(
       weekly,
       achievements,
       goal: goalCompleted,
+      combo,
       player: await playerSnapshot(tx, userId),
     };
   });
+}
+
+/**
+ * Grants the daily combo once every scheduled quest of the day is completed. System event quests are
+ * extras and don't count; a skipped or expired quest means no combo that day. Keyed per day.
+ */
+async function grantDailyCombo(tx: AppDb, userId: string, today: QuestDate, now: Date) {
+  const rows = await tx
+    .select({ status: playerQuest.status, xpReward: playerQuest.xpReward })
+    .from(playerQuest)
+    .where(
+      and(
+        eq(playerQuest.userId, userId),
+        eq(playerQuest.questDate, today),
+        isNotNull(playerQuest.templateId),
+        eq(playerQuest.isEvent, false),
+      ),
+    );
+  if (rows.length < BONUS_RULES.comboMinQuests || rows.some((r) => r.status !== "completed")) return null;
+  const amount = comboBonus(rows.reduce((sum, r) => sum + r.xpReward, 0));
+  const grant = await grantXp(tx, {
+    userId,
+    eventType: "bonus",
+    sourceType: "daily_combo",
+    sourceId: today,
+    amount,
+    reason: "Daily combo: every daily quest completed",
+    idempotencyKey: `combo:${userId}:${today}`,
+    now,
+  });
+  return grant.status === "granted" ? { xp: grant.granted } : null;
 }
 
 // ─── Custom quest builder ────────────────────────────────────────────────────

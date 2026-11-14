@@ -36,9 +36,11 @@ describe("dashboard", () => {
       await completeQuest(db, userId, q.id, { now });
     }
     expect((await getStatusWindow(db, userId, clock("2026-10-27"))).streak).toBe(3);
-    // On the 28th the streak survives (today isn't over); on the 29th it is broken.
+    // On the 28th the streak survives (today isn't over). On the 29th this week's freeze covers the
+    // missed 28th; on the 30th two days are missed, which no freeze covers.
     expect((await getStatusWindow(db, userId, clock("2026-10-28"))).streak).toBe(3);
-    expect((await getStatusWindow(db, userId, clock("2026-10-29"))).streak).toBe(0);
+    expect(await getStatusWindow(db, userId, clock("2026-10-29"))).toMatchObject({ streak: 3, freezeAvailable: false });
+    expect((await getStatusWindow(db, userId, clock("2026-10-30"))).streak).toBe(0);
   });
 });
 

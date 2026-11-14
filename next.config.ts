@@ -5,9 +5,12 @@ const isProd = process.env.NODE_ENV === "production";
 // Everything is served from our own origin: next/font self-hosts fonts and there are no
 // third-party scripts. 'unsafe-inline' is needed for Next's inline bootstrap scripts and for
 // inline styles (charts, animations); 'unsafe-eval' only in development (React Refresh).
+// Cloudflare Turnstile is the one exception, and only when its key is set (see docs/DEPLOYMENT.md).
+const captchaOrigin = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? " https://challenges.cloudflare.com" : "";
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
+  `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}${captchaOrigin}`,
+  ...(captchaOrigin ? [`frame-src${captchaOrigin}`] : []),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
@@ -33,6 +36,9 @@ const nextConfig: NextConfig = {
   // E2E runs its own dev server alongside `pnpm dev`; a separate build dir keeps them from
   // sharing (and corrupting) one cache.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // Self-hosted (Docker): bundles a minimal Node server + only the deps it needs, instead of all
+  // of node_modules. See the Dockerfile and docs/DEPLOYMENT.md.
+  output: "standalone",
   cacheComponents: false,
   poweredByHeader: false,
   async headers() {

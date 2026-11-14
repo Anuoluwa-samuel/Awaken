@@ -15,14 +15,20 @@ import {
   type FocusSession,
 } from "@/server/services/focus";
 import { QuestError } from "@/server/services/quests";
+import type { QuotaMetric } from "@/lib/limits";
+import { guardAction, guardQuota } from "@/server/guards";
 
 type Result<T> = { ok: true; data: T; serverNow: string } | { ok: false; error: string };
 
 const idSchema = z.string().uuid();
 const startSchema = z.object({ minutes: z.number().int(), questId: z.string().uuid().nullable() });
 
-async function run<T>(fn: (userId: string) => Promise<T>, revalidate = false): Promise<Result<T>> {
+async function run<T>(fn: (userId: string) => Promise<T>, revalidate = false, quota?: QuotaMetric): Promise<Result<T>> {
   const { user } = await requirePlayer();
+  const limited = await guardAction(user.id);
+  if (limited) return { ok: false, error: limited };
+  const overQuota = quota ? await guardQuota(user.id, quota) : null;
+  if (overQuota) return { ok: false, error: overQuota };
   try {
     const data = await fn(user.id);
     if (revalidate) revalidatePath("/system", "layout");
@@ -37,7 +43,7 @@ async function run<T>(fn: (userId: string) => Promise<T>, revalidate = false): P
 export async function startFocusAction(input: unknown): Promise<Result<{ session: FocusSession; resumedExisting: boolean }>> {
   const parsed = startSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid request." };
-  return run((userId) => startFocus(db, userId, parsed.data));
+  return run((userId) => startFocus(db, userId, parsed.data), false, "focus_started");
 }
 
 export async function pauseFocusAction(id: unknown): Promise<Result<FocusSession>> {

@@ -29,7 +29,7 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/sy
         action={<MarkAllRead disabled={unread === 0} />}
       />
       {items.length === 0 ? (
-        <EmptyState icon={Bell}>{cursor ? "No older messages." : "No system messages yet."}</EmptyState>
+        <EmptyState icon={Bell} title="Channel quiet">{cursor ? "No older messages." : "The System will speak when something happens."}</EmptyState>
       ) : (
         <ul className="divide-y divide-line">
           {items.map((n) => (
