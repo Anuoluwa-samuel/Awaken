@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, Geist, Geist_Mono, Montserrat } from "next/font/google";
 import { IntroSplash } from "@/components/brand/intro-splash";
 import { LogoDefs } from "@/components/brand/logo";
-import { SiteAnalytics } from "@/components/site-analytics";
 import { pageMetadata, SITE, siteUrl } from "@/lib/site";
 import "./globals.css";
 
@@ -39,8 +38,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LogoDefs />
         <IntroSplash />
         {children}
-        {/* Off Vercel (local dev, tests) there's no analytics endpoint to send to. */}
-        {process.env.VERCEL ? <SiteAnalytics /> : null}
       </body>
     </html>
   );

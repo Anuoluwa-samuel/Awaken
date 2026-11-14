@@ -4,7 +4,7 @@ import { cronAuthorised } from "../authorised";
 
 export const dynamic = "force-dynamic";
 
-/** Daily clean-up, called by Vercel Cron (vercel.json). Without CRON_SECRET set, it stays off. */
+/** Daily clean-up, called by .github/workflows/maintenance.yml. Without CRON_SECRET set, it stays off. */
 export async function GET(request: Request) {
   if (!cronAuthorised(request)) return new Response("Not found", { status: 404 });
   const removed = await runMaintenance(db);

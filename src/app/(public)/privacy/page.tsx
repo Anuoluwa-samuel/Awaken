@@ -92,11 +92,8 @@ export default function PrivacyPage() {
 
       <h2>Site analytics</h2>
       <p>
-        To see which pages are used and how fast they load, we use Vercel Web Analytics and Speed Insights. They
-        count page views and measure loading times without cookies, without recording what you type or how you
-        move around a page (no session replays), and without identifying you across other websites. Before anything
-        is sent, we strip personal details from page addresses: email addresses, password-reset links and the ids of
-        your quests, habits and goals. Visitors are counted using a short-lived hash that changes every day.
+        We don&apos;t use any site analytics or page-view tracking. Nothing about which pages you visit, how you
+        move around the app, or how fast it loads for you is sent anywhere outside the service itself.
       </p>
 
       <h2>Cookies and local storage</h2>
@@ -111,14 +108,8 @@ export default function PrivacyPage() {
       <p>We use a small number of providers to run AWAKEN. They handle your data only on our instructions:</p>
       <ul>
         <li>
-          <strong>Vercel</strong> hosts the app, keeps short-lived request logs and provides the cookie-free site
-          analytics described above.
-        </li>
-        <li>
-          <strong>Neon</strong> hosts the database and a separate backup copy, in the United States.
-        </li>
-        <li>
-          <strong>GitHub</strong> stores encrypted database backups for up to 30 days.
+          {/* TODO before publishing: confirm the Oracle Cloud region this VM runs in and name it here. */}
+          <strong>Oracle Cloud Infrastructure</strong> hosts the server the app and database run on.
         </li>
         <li>
           <strong>Resend</strong> delivers account emails, when email is switched on.

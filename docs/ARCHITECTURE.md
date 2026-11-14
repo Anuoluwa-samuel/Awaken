@@ -500,12 +500,9 @@ cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPT
 request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
 Only an age range is stored, never a date of birth.
 
-**Analytics** (`src/components/site-analytics.tsx`): Vercel Web Analytics (page views) and Speed
-Insights (Core Web Vitals), rendered only when `VERCEL` is set. Both are cookie-free with no
-session replay, and their scripts are served from our own origin (`/_vercel/…`), so the CSP is
-unchanged. `redactAnalyticsUrl` (`src/lib/web-analytics.ts`) runs in `beforeSend` for both: UUID
-path segments become `[id]` and every query parameter except `range` is dropped, so emails
-(`/verify-email?email=`), reset tokens and `?next=` targets never leave the browser.
+**Analytics:** none wired in. Vercel Web Analytics and Speed Insights were Vercel-only and were
+removed with the move off Vercel (self-hosted; see docs/DEPLOYMENT.md). The admin dashboard's
+aggregates (below) come from the database, not from page-view tracking.
 
 **Leaderboard** (`src/server/services/leaderboard.ts`, `/system/leaderboard`): top 100 by lifetime XP
 with `rank()` (equal XP shares a place), plus the viewer's own place. Only opted-in players with XP
@@ -537,14 +534,15 @@ renders the right width with no jump. Children use `group-data-[collapsed=true]:
 Limits are atomic single statements, so parallel requests can't overshoot (real-Postgres race test).
 A test fails if any exported server action skips `guardAction`. Quotas cover creating things, never
 completing them, so they can't limit XP. If Cloudflare is unreachable the request is let through and
-logged, because rate limits and lockout still apply. Prerendered pages aren't throttled: the CDN
-serves them for almost nothing, and running code for them would add cost.
+logged, because rate limits and lockout still apply. Prerendered pages skip `src/proxy.ts`
+entirely (its `matcher`), so static/public pages don't pay for a database round-trip they don't need.
 
-What saves money: nav links don't prefetch (each page view would otherwise trigger about a dozen
-function calls); leaderboard and admin reads are shared for `READ_CACHE_SECONDS` per instance;
-`/api/health` hits the database at most every 15 s; Speed Insights samples half of visits; and
-`/api/cron/maintenance` deletes expired sessions, tokens, counters and old read notifications daily.
-It never touches XP, quests, habits or goals. The admin dashboard shows usage against each budget.
+What saves money (a single always-on VM, not per-request billing, but still worth keeping lean):
+nav links don't prefetch (each page view would otherwise trigger about a dozen function calls);
+leaderboard and admin reads are shared for `READ_CACHE_SECONDS` per instance; `/api/health` hits
+the database at most every 15 s; and `/api/cron/maintenance` deletes expired sessions, tokens,
+counters and old read notifications daily. It never touches XP, quests, habits or goals. The admin
+dashboard shows usage against each budget.
 
 **Spam protection** (`src/lib/auth/spam-rules.ts`, before-hook on `/sign-up/email`): a honeypot
 field (`website`, off-screen, `tabindex=-1`, `aria-hidden`); a signed form token issued by the
@@ -552,11 +550,10 @@ register page (HMAC with `BETTER_AUTH_SECRET`) that must be at least `SIGN_UP_MI
 and at most 24 h old, so scripts posting to the API directly are refused; a short list of
 throwaway-inbox domains (the only check that explains itself, since a person can fix it); and a
 per-IP sign-up limit of 5/hour. Failures other than the email return a deliberately vague
-`SIGN_UP_BLOCKED` and log the reason server-side. Optional Vercel BotID
-(`NEXT_PUBLIC_BOTID_ENABLED`, `src/instrumentation-client.ts` + the auth route's `POST`) guards
-sign-up, sign-in and password-reset requests; off-Vercel requests are treated as human. There's no
-public user content (quests, goals and notes are visible only to their owner), so content spam
-has nowhere to appear.
+`SIGN_UP_BLOCKED` and log the reason server-side. (Vercel BotID guarded these same requests before
+the move off Vercel; it was Vercel-only, so it was removed rather than left dark — Cloudflare
+Turnstile, below, is the bot mitigation that still applies.) There's no public user content (quests,
+goals and notes are visible only to their owner), so content spam has nowhere to appear.
 
 **Search & sharing** (`src/lib/site.ts`): public pages (`PUBLIC_ROUTES`: `/`, `/register`,
 `/login`, `/terms`, `/privacy`) get a description, canonical URL and Open Graph/Twitter tags via
@@ -655,3 +652,4 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 9 — Progress analytics with range filters, charts + tables; notifications with read state, daily and deadline reminders, header panel
 - [x] Phase 10 — Playwright E2E (journey, security, isolation, rate limits), axe accessibility on all pages, mobile overflow checks, fixes, docs/LIMITATIONS.md
 - [x] Phase 11 — Vercel + Neon + Resend: Resend email, DB-backed rate limits keyed on x-vercel-forwarded-for, pooled/direct Neon URLs, security headers + CSP, /api/health, global error page, deploy:check, CI workflow, docs/DEPLOYMENT.md
+- [x] Phase 12 — Moved off Vercel (cost): self-hosted Docker + Caddy on an Oracle Cloud VM, own Postgres container, `output: "standalone"`, GitHub Actions cron (maintenance + reminders) replacing Vercel Cron, dropped Vercel Analytics/Speed Insights/BotID, docs/DEPLOYMENT.md and docs/BACKUPS.md rewritten

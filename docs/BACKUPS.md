@@ -1,90 +1,132 @@
 # Database backups
 
-Three independent layers, so no single mistake or outage loses player data:
+Self-hosted Postgres has no built-in point-in-time restore, so backups are the only safety net —
+set this up before you have real players.
 
 | Layer | What it protects against | How far back |
 |---|---|---|
-| **Neon instant restore** (built in) | A bad change you notice quickly | 1–30 days, depending on your Neon plan |
-| **Backup database** (a separate Neon project) | Losing or corrupting the main database | Last night |
-| **Encrypted copies** (GitHub Actions artifacts) | A mistake you notice late, or losing Neon access | 30 days |
+| **Local encrypted dumps** (`scripts/backup-local.sh`, nightly on the VM) | A bad change, a mistake, corruption | Last `KEEP_DAYS` nights (default 14) |
+| **Off-box copy** (optional, step 4) | Losing the VM itself — disk failure, account issue, fat-fingered `rm` | As far back as you copy |
 
-Every night at 02:30 UTC, `.github/workflows/backup.yml` runs `scripts/backup-database.sh`. It **only reads**
-production, encrypts a copy, refreshes the backup database and checks the result. If it fails, GitHub emails you.
-
-**It can't overwrite the real database:** it refuses to run if the two settings point at the same database,
-if the source is marked as a backup copy (settings swapped), or if the target has tables but isn't marked as a
-backup copy. A failed restore rolls back and keeps the last good copy.
+`scripts/backup-local.sh` **only reads** the database: it dumps, encrypts, verifies the file isn't
+suspiciously small, and prunes old copies. It never writes to `awaken-db`.
 
 ## Setup (about 10 minutes)
 
-### 1. Create the backup database
-
-In Vercel → **Storage** → **Create Database** → **Neon**, create a new database named `awaken-backup`, ideally
-in a different region from the main one. **Don't connect it to the AWAKEN project**, or Vercel may add
-variables that clash with the real database. Copy its direct URL (`DATABASE_URL_UNPOOLED`).
-
-### 2. Create a passphrase
+### 1. Create a passphrase
 
 ```bash
-openssl rand -base64 32 | tr -d '\n' | pbcopy
+openssl rand -base64 32 | tr -d '\n'
 ```
 
-Save it in your password manager **first**. Without it, the encrypted copies can't be opened, by anyone.
+Save it in your password manager **first**. Without it, the encrypted copies can't be opened, by
+anyone — including you.
 
-### 3. Add three secrets
+### 2. Install the tools the script needs, once
 
-In GitHub → the repository → **Settings → Secrets and variables → Actions → New repository secret**:
+The script runs *on the VM itself*, not in a container, so it needs `pg_dump` and `gpg` on the host:
 
-| Name | Value |
-|---|---|
-| `BACKUP_SOURCE_DATABASE_URL` | The **main** database's direct URL (host without `-pooler`) |
-| `BACKUP_TARGET_DATABASE_URL` | The **backup** database's direct URL |
-| `BACKUP_PASSPHRASE` | The passphrase from step 2 |
+```bash
+sudo apt-get update && sudo apt-get install -y postgresql-client gnupg
+```
 
-Check which is which before saving. If they're swapped, the job refuses to run.
+### 3. Schedule it
+
+A systemd timer survives reboots better than crontab and shows up in `systemctl status`. On the VM,
+replace `/path/to/awaken` below with the repository's actual path, and `PASSWORD`/`PASSPHRASE`
+with the real values (`POSTGRES_PASSWORD` from `.env.production`, and the passphrase from step 1):
+
+```bash
+sudo tee /etc/systemd/system/awaken-backup.service >/dev/null <<'EOF'
+[Unit]
+Description=AWAKEN database backup
+
+[Service]
+Type=oneshot
+# docker-compose.prod.yml publishes awaken-db to 127.0.0.1 only, for exactly this: from the host's
+# own perspective it's "localhost", not the "awaken-db" Docker DNS name the app container uses.
+Environment=DATABASE_URL=postgres://awaken:PASSWORD@localhost:5432/awaken
+Environment=BACKUP_PASSPHRASE=PASSPHRASE
+ExecStart=/path/to/awaken/scripts/backup-local.sh
+EOF
+sudo chmod 600 /etc/systemd/system/awaken-backup.service
+
+sudo tee /etc/systemd/system/awaken-backup.timer >/dev/null <<'EOF'
+[Unit]
+Description=Run the AWAKEN backup nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now awaken-backup.timer
+```
 
 ### 4. Run it once
 
-GitHub → **Actions → Backup database → Run workflow**. A green tick means the backup was made and verified.
-In the log, source and backup row counts should match.
+```bash
+sudo systemctl start awaken-backup.service
+systemctl status awaken-backup.service
+ls -la /var/backups/awaken
+```
 
-### Optional: read-only access
+A file like `awaken-20261114T023000Z.dump.gpg` of a reasonable size (not a few hundred bytes) means
+it worked.
 
-The source URL normally has full access. For extra safety, make a role that can only read: in the Neon
-console for the main database, add a role named `backup_reader`, run `GRANT pg_read_all_data TO backup_reader;`
-in its SQL editor, and use that role's URL as `BACKUP_SOURCE_DATABASE_URL`.
+### Optional: copy backups off the VM
+
+Losing the VM loses every on-box backup too. Pick one, run after step 3's job (e.g. chained in the
+same systemd service, or its own timer a few minutes later):
+
+- **rclone** to an S3-compatible bucket (Backblaze B2's free tier covers this easily):
+  `rclone copy /var/backups/awaken remote:awaken-backups`
+- **scp** to another machine you control, including another Always Free Oracle VM in a different
+  region.
 
 ## Restoring
 
-Restoring changes production, so only the owner does it, deliberately. **Try the least drastic option first.**
+Restoring changes production, so only the owner does it, deliberately. **Try the least drastic
+option first.**
 
-**A. A recent mistake:** in the Neon console, use **Instant restore** to create a branch from a moment before the
-problem, check the data there, then restore. This is the simplest and most precise option.
+**A. The app container, not the data:** `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build awaken-app` rebuilds and restarts just the app. Doesn't touch `awaken-db`.
 
-**B. Main database lost:** the backup database is a complete working copy. Point the app's `DATABASE_URL`
-at it in Vercel and redeploy. You lose anything since last night's backup.
+**B. A bad migration or a mistake you caught fast:** if `awaken-db`'s volume wasn't touched since,
+stop the app (`docker compose … stop awaken-app`), restore from the most recent backup (option C)
+into a **new, temporary** Postgres container first, check the data there, then swap it in.
 
-**C. An older copy:** download the artifact from **Actions → Backup database → (a run) → Artifacts**, unzip it, then:
-
-```bash
-gpg --decrypt --output awaken-backup.dump awaken-backup.dump.gpg
-```
-
-Restore it into a **new, empty** database first and check it there:
+**C. Restore an encrypted copy.** On the VM, with `pg_dump`/`psql` already installed (step 2) and
+`awaken-db` reachable at `localhost:5432` (the loopback port `docker-compose.prod.yml` publishes):
 
 ```bash
-pg_restore --dbname="<URL of the new, empty database>" --no-owner --no-privileges --single-transaction awaken-backup.dump
+gpg --decrypt --output awaken-backup.dump /var/backups/awaken/awaken-<timestamp>.dump.gpg
+# Enter BACKUP_PASSPHRASE when prompted.
+
+# A new, empty database on the same server first — never straight into "awaken" itself.
+PGPASSWORD=<POSTGRES_PASSWORD> createdb -h localhost -U awaken awaken_restore_check
+PGPASSWORD=<POSTGRES_PASSWORD> pg_restore --dbname="postgres://awaken:<POSTGRES_PASSWORD>@localhost:5432/awaken_restore_check" \
+  --no-owner --no-privileges --single-transaction awaken-backup.dump
+psql -h localhost -U awaken -d awaken_restore_check -c 'select count(*) from "user"'
 ```
 
-Then point the app at that database. Delete the decrypted file when you're done, since it holds player data.
+Once you're confident it's good, stop the app
+(`docker compose -f docker-compose.prod.yml --env-file .env.production stop awaken-app`) and
+restore into the real database the same way, with `--clean --if-exists` added so it replaces what's
+there:
 
-## Keeping it working
+```bash
+PGPASSWORD=<POSTGRES_PASSWORD> pg_restore --dbname="postgres://awaken:<POSTGRES_PASSWORD>@localhost:5432/awaken" \
+  --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error awaken-backup.dump
+docker compose -f docker-compose.prod.yml --env-file .env.production start awaken-app
+```
 
-- **Practise a restore** every few months. A backup you've never restored is only a hope.
-- **Check it now and then.** GitHub emails you when a run fails, but look at the Actions tab occasionally. If the
-  repository ever becomes public, GitHub pauses scheduled jobs after 60 days without activity.
-- **Rotate the secrets** if a database password changes, or the job will fail (and email you).
-- **Version:** the job uses Postgres 17 tools. If Neon's server moves to a newer major version, update the
-  version in `backup.yml`.
-- **Deleted accounts** leave the backup database the next night and the encrypted copies within 30 days, as the
-  Privacy Policy says.
+Then drop the check database and delete the decrypted file, since both hold player data:
+
+```bash
+PGPASSWORD=<POSTGRES_PASSWORD> dropdb -h localhost -U awaken awaken_restore_check
+rm -f awaken-backup.dump
+```

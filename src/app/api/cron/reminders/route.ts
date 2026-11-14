@@ -6,8 +6,8 @@ import { cronAuthorised } from "../authorised";
 export const dynamic = "force-dynamic";
 
 /**
- * The evening push reminder. Called every hour (.github/workflows/reminders.yml, because Vercel's
- * free plan only runs cron daily); each player is reminded once, in their own evening.
+ * The evening push reminder. Called every hour by .github/workflows/reminders.yml, since players'
+ * evenings fall in different hours; each player is reminded once, in their own evening.
  */
 export async function GET(request: Request) {
   if (!cronAuthorised(request)) return new Response("Not found", { status: 404 });

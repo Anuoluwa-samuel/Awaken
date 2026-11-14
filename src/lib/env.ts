@@ -15,7 +15,7 @@ const schema = z
     RESEND_API_KEY: z.string().startsWith("re_").optional(),
     /** Verified sender, e.g. `AWAKEN <system@your-domain.com>`. */
     EMAIL_FROM: z.string().min(3).optional(),
-    /** Connection pool size per server instance (Vercel functions: keep it small). */
+    /** Connection pool size per server instance. */
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).optional(),
     /** Minimum seconds between opening the sign-up form and submitting it (anti-bot). Tests use 0. */
     SIGN_UP_MIN_SECONDS: z.coerce.number().min(0).max(60).default(3),
@@ -25,13 +25,11 @@ const schema = z
     SIGNUP_DAILY_BUDGET: z.coerce.number().int().min(0).default(500),
     /** Seconds to reuse leaderboard and admin figures before re-querying. Tests use 0. */
     READ_CACHE_SECONDS: z.coerce.number().int().min(0).default(30),
-    /** Protects the daily maintenance job. Vercel Cron sends it automatically. */
+    /** Protects the daily maintenance job. The GitHub Actions workflow sends it; see docs/DEPLOYMENT.md. */
     CRON_SECRET: z.string().min(16).optional(),
     /** Cloudflare Turnstile (captcha). Both keys on, or both off. */
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
     TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
-    /** Vercel BotID on sign-up, sign-in and password reset. Off until verified on a deployment. */
-    NEXT_PUBLIC_BOTID_ENABLED: bool,
     /** Web push for the evening reminder (`pnpm push:keys` makes a pair). Both keys on, or both off. */
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     VAPID_PRIVATE_KEY: z.string().min(1).optional(),

@@ -109,8 +109,7 @@ export default async function AdminPage() {
           <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-glow">Admin</p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-wide">Analytics dashboard</h1>
           <p className="mt-2 text-sm text-ink-muted">
-            Site-wide totals only, with no individual players&apos; data. Figures are live from the database. Page views
-            and load speed are in Vercel Analytics.
+            Site-wide totals only, with no individual players&apos; data. Figures are live from the database.
           </p>
         </div>
 
@@ -172,7 +171,7 @@ export default async function AdminPage() {
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Tile label="Emails sent" value={`${fmt.format(a.usage.emailsSent)}/${fmt.format(env.EMAIL_DAILY_BUDGET)}`} hint={`${fmt.format(a.usage.emailsSkipped)} skipped over budget`} />
             <Tile label="Sign-ups" value={`${fmt.format(a.usage.signups)}/${fmt.format(env.SIGNUP_DAILY_BUDGET)}`} hint="pauses at the daily budget" />
-            <Tile label="Database size" value={`${Math.round((a.usage.databaseBytes / 1_048_576) * 10) / 10} MB`} hint="compare with your Neon plan's limit" />
+            <Tile label="Database size" value={`${Math.round((a.usage.databaseBytes / 1_048_576) * 10) / 10} MB`} hint="compare with the VM's free disk space" />
             <Tile label="Actions rate-limited" value={fmt.format(a.usage.rateLimited)} hint="players going too fast" />
             <Tile label="Quotas reached" value={fmt.format(a.usage.quotaReached)} hint="daily creation limits hit" />
             <Tile label="Bookkeeping rows" value={fmt.format(a.usage.bookkeepingRows)} hint="limit counters, cleared daily" />

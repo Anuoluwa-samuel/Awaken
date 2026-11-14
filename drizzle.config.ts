@@ -12,8 +12,10 @@ export default defineConfig({
   schema: "./src/db/schema/index.ts",
   out: "./drizzle",
   dialect: "postgresql",
-  // Migrations use a direct (unpooled) connection when one is provided — Neon's pooler is in
-  // transaction mode, which isn't suitable for DDL in long transactions.
+  // Migrations use a direct (unpooled) connection when one is provided — a managed Postgres's
+  // pooler (if you use one) is typically in transaction mode, which isn't suitable for DDL in
+  // long transactions. A self-hosted Postgres container has no pooler, so DATABASE_URL works
+  // for both.
   dbCredentials: { url },
   strict: true,
 });

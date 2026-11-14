@@ -36,6 +36,9 @@ const nextConfig: NextConfig = {
   // E2E runs its own dev server alongside `pnpm dev`; a separate build dir keeps them from
   // sharing (and corrupting) one cache.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // Self-hosted (Docker): bundles a minimal Node server + only the deps it needs, instead of all
+  // of node_modules. See the Dockerfile and docs/DEPLOYMENT.md.
+  output: "standalone",
   cacheComponents: false,
   poweredByHeader: false,
   async headers() {

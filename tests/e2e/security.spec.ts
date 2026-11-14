@@ -96,7 +96,7 @@ test("responses don't advertise the framework or a server version", async ({ req
   for (const path of ["/", "/login", "/api/health", "/no-such-page", "/sitemap.xml"]) {
     const headers = (await request.get(path)).headers();
     expect(headers["x-powered-by"], path).toBeUndefined();
-    // Hosting may name itself (Vercel sends "Server: Vercel"), but never with a version number.
+    // The reverse proxy may name itself (Caddy sends "Server: Caddy"), but never with a version number.
     expect(headers["server"] ?? "", path).not.toMatch(/\d/);
   }
 });

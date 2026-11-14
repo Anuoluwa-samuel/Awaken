@@ -9,7 +9,7 @@ const PROTECTED = /^\/(system|onboarding|admin)(\/|$)/;
 
 /** Same source of the client IP as Better Auth's limits. See docs/DEPLOYMENT.md. */
 function clientIp(request: NextRequest) {
-  const header = process.env.VERCEL ? "x-vercel-forwarded-for" : process.env.AUTH_IP_HEADER || "x-forwarded-for";
+  const header = process.env.AUTH_IP_HEADER || "x-forwarded-for";
   return request.headers.get(header)?.split(",")[0]?.trim() || "unknown";
 }
 
@@ -32,8 +32,8 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Dynamic routes only. Prerendered pages (home, guide, legal) and static files come from Vercel's
-// CDN, where they cost almost nothing, so running code for them would add cost rather than save it.
+// Dynamic routes only. Prerendered pages (home, guide, legal) and static files are served
+// without running this, which also keeps them fast under the single Node process.
 export const config = {
   matcher: [
     "/system/:path*",

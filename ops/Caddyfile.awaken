@@ -1,0 +1,13 @@
+# Add this block into your existing shared Caddyfile (or as a separate file your Caddyfile
+# `import`s), then `docker exec <your-caddy-container> caddy reload --config /etc/caddy/Caddyfile`.
+# See docs/DEPLOYMENT.md.
+
+getawaken.com.ng {
+	# Caddy's reverse_proxy would otherwise APPEND the real client IP onto whatever
+	# X-Forwarded-For a visitor sends — so a spoofed header could still win when the app
+	# reads the *first* value (env.ts AUTH_IP_HEADER / x-forwarded-for). Replace it outright.
+	reverse_proxy awaken-app:3000 {
+		header_up -X-Forwarded-For
+		header_up X-Forwarded-For {http.request.remote.host}
+	}
+}
