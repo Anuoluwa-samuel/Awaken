@@ -1,14 +1,13 @@
-# Self-hosted production: the app + its own Postgres, on a VM that also runs other projects
-# behind a shared Caddy. See docs/DEPLOYMENT.md. Run with:
+# Self-hosted production: the app + its own Postgres + its own Cloudflare Tunnel, on a VM that
+# also runs other projects (Playbot, yito-shot-it) the same way — no shared reverse proxy, no
+# open ports: each project is its own isolated Docker network with its own `cloudflared`
+# container making an outgoing-only connection to Cloudflare. See docs/DEPLOYMENT.md. Run with:
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 #
 # --env-file is required even though the app's own variables come from `env_file:` below:
-# it's what fills in ${POSTGRES_PASSWORD} and ${CADDY_NETWORK} in this file itself (Compose
-# only reads a plain ".env" for that by default, and this project's local dev already owns
-# that name for `pnpm dev`).
-#
-# Service names are prefixed (awaken-app / awaken-db) so they don't collide with other
-# projects' services on the shared "caddy" network.
+# it's what fills in ${POSTGRES_PASSWORD} in this file itself (Compose only reads a plain
+# ".env" for that by default, and this project's local dev already owns that name for
+# `pnpm dev`).
 services:
   awaken-app:
     build: .
@@ -22,7 +21,20 @@ services:
         condition: service_healthy
     networks:
       - internal
-      - caddy
+
+  # Outgoing-only connection to Cloudflare; nothing on this VM accepts inbound traffic on 80/443.
+  # Create the tunnel in Cloudflare (Zero Trust → Networks → Tunnels), name it "awaken", add a
+  # public hostname getawaken.com.ng → HTTP → awaken-app:3000, and put its token in
+  # CLOUDFLARE_TUNNEL_TOKEN. See docs/DEPLOYMENT.md.
+  awaken-cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    container_name: awaken-cloudflared
+    command: ["tunnel", "--no-autoupdate", "run"]
+    restart: unless-stopped
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env.production}
+    networks:
+      - internal
 
   # Not part of the running stack (profile "tools": `docker compose … up -d` skips it).
   # Built from the `builder` Dockerfile stage, which — unlike awaken-app's final image — still
@@ -63,10 +75,6 @@ volumes:
   awaken_pgdata:
 
 networks:
-  # Only awaken-db is on this one: nothing but the app can reach the database.
+  # Everything for this project — app, db, tunnel — on one network, isolated from Playbot's
+  # and yito-shot-it's. Nothing outside this project can reach awaken-db.
   internal: {}
-  # Your existing Caddy's network. Check its actual name (`docker network ls`) and set
-  # CADDY_NETWORK in .env.production if it isn't "caddy_net".
-  caddy:
-    external: true
-    name: ${CADDY_NETWORK:-caddy_net}

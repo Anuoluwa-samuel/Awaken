@@ -112,11 +112,16 @@ export default function PrivacyPage() {
           <strong>Oracle Cloud Infrastructure</strong> hosts the server the app and database run on.
         </li>
         <li>
+          <strong>Cloudflare</strong> routes every request to the app (so our server never accepts connections
+          directly from the internet) and provides DNS. It sees your IP address and the pages you request, the same
+          as any provider sitting in front of a website.
+        </li>
+        <li>
           <strong>Resend</strong> delivers account emails, when email is switched on.
         </li>
         <li>
-          <strong>Cloudflare Turnstile</strong> checks for automated traffic on sign-up, password reset and repeated
-          failed sign-ins, when switched on. It sees your IP address and browser details for that check.
+          <strong>Cloudflare Turnstile</strong> additionally checks for automated traffic on sign-up, password reset
+          and repeated failed sign-ins, when switched on.
         </li>
       </ul>
       <p>

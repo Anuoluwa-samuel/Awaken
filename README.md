@@ -69,4 +69,4 @@ tests/unit|integration|e2e
 ## Status
 
 All 12 phases are done. Deploy with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (self-hosted: Docker +
-Caddy + Resend); what isn't built or verified yet is in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+Cloudflare Tunnel + Resend); what isn't built or verified yet is in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).

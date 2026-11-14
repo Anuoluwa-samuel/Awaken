@@ -1,29 +1,33 @@
-# Deploying AWAKEN — Oracle Cloud + Docker + Caddy + Resend
+# Deploying AWAKEN — Oracle Cloud + Docker + Cloudflare Tunnel + Resend
 
-Self-hosted: the app and its own Postgres run as Docker containers on a VM you already have
-(Oracle Cloud's Always Free tier, sharing the box with other projects), behind an existing shared
-Caddy reverse proxy. You need the VM, a domain (you have `getawaken.com.ng`), and a
-[Resend](https://resend.com) account for email. Nothing here needs a credit card beyond what the
-VM and domain already cost.
+Self-hosted, on the same Oracle Cloud VM (Always Free) that already runs Playbot and
+yito-shot-it: the app and its own Postgres run as Docker containers, exposed the same way those
+two projects are — a `cloudflared` container making an **outgoing-only** connection to
+Cloudflare, so the VM accepts nothing from the internet (no open ports, no certificates to
+manage, no shared reverse proxy). SSH to the VM itself is Tailscale-only. You need a domain (you
+have `getawaken.com.ng`) and a [Resend](https://resend.com) account for email.
 
 > Secrets go into `.env.production` on the VM (`chmod 600`, never committed — see
 > `.env.production.example`). `pnpm deploy:check` validates your settings without printing them.
 
 ## 1. The VM
 
-Assumes: Docker is already installed, and a Caddy container is already reverse-proxying your other
-projects on a shared Docker network. If that's not the case yet, set those up first — this doc
-starts from there.
-
-1. Confirm Docker works and find Caddy's network name:
+1. Connect over Tailscale (same as Playbot — `tailscale status` on your Mac shows the VM's
+   Tailscale IP if the `playbot` hostname doesn't resolve by name):
    ```bash
-   docker network ls
+   ssh -i ~/.ssh/playbot_oracle ubuntu@playbot
    ```
-   Put that name in `.env.production` as `CADDY_NETWORK` (step 4).
-2. Point `getawaken.com.ng`'s DNS A record at the VM's public IP, and open ports 80/443 in the
-   VM's security list (Oracle Cloud's firewall is in the Console, **not** just `iptables` on the
-   box — both need the rule).
-3. Clone the repository onto the VM (or pull it if it's already there from CI — see CI below).
+2. Put `getawaken.com.ng` on Cloudflare: **Cloudflare dashboard → Add a domain** (Free plan), then
+   change the nameservers at wherever you registered `.com.ng` to the two Cloudflare shows. Wait
+   until Cloudflare says the domain is **Active** (this step can take a while to propagate — the
+   rest can wait on it).
+3. Clone the repository onto the VM, matching the `/srv/<project>/app` layout the other two
+   projects use:
+   ```bash
+   sudo mkdir -p /srv/awaken && sudo chown ubuntu:ubuntu /srv/awaken
+   git clone <your repo URL> /srv/awaken/app
+   cd /srv/awaken/app
+   ```
 
 ## 2. Database — Postgres in its own container
 
@@ -78,17 +82,35 @@ address — fine for a smoke test, not for players.
 doesn't.) Leave `RESEND_API_KEY` and `EMAIL_FROM` unset and set `REQUIRE_EMAIL_VERIFICATION=false`.
 Everything works except email; `pnpm deploy:check` reports a WARN, not a FAIL.
 
-## 4. Configure `.env.production`
+## 4. Cloudflare Tunnel: connects `getawaken.com.ng` to the VM
+
+The same pattern Playbot and yito-shot-it already use. The server makes an outgoing connection to
+Cloudflare, so it still accepts nothing from the internet: no open ports, firewall rules or
+certificates to manage.
+
+1. **Cloudflare dashboard → Zero Trust → Networks → Tunnels → Create a tunnel.** (If this is the
+   first tunnel on the account, it asks you to pick a team name and the **Free** plan — any team
+   name works, it's not shown to players.)
+2. Type **Cloudflared**, name it `awaken`, then **Save tunnel**.
+3. On "Install and run a connector", copy **only the token** — the long `eyJ…` text after
+   `--token` in any of the commands shown. Don't run those commands; the `awaken-cloudflared`
+   container runs the connector instead. Keep the token somewhere safe until step 5.
+4. **Next → Public hostname:**
+   - Subdomain empty, Domain `getawaken.com.ng`, Path empty
+   - Service **Type** `HTTP`, **URL** `awaken-app:3000`
+5. **Save hostname.** Cloudflare creates the DNS record for `getawaken.com.ng` itself.
+
+## 5. Configure `.env.production`
 
 ```bash
 cp .env.production.example .env.production
 chmod 600 .env.production
 ```
 
-Fill in every value `.env.production.example` lists — `POSTGRES_PASSWORD`, `CADDY_NETWORK`,
-`BETTER_AUTH_SECRET` (`openssl rand -base64 32`, new and production-only), `CRON_SECRET` (the same
-value you already put in the GitHub repo's `CRON_SECRET` secret, or generate one now and update
-both), and the Resend/VAPID/Turnstile pairs if you're using them.
+Fill in every value `.env.production.example` lists — `POSTGRES_PASSWORD`, `CLOUDFLARE_TUNNEL_TOKEN`
+(from step 4.3), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`, new and production-only),
+`CRON_SECRET` (the same value you already put in the GitHub repo's `CRON_SECRET` secret, or
+generate one now and update both), and the Resend/VAPID/Turnstile pairs if you're using them.
 
 ### Check the configuration first
 
@@ -100,11 +122,15 @@ It reports PASS / WARN / FAIL per setting (never values), confirms the database 
 migrations are applied and seed data exists, and exits non-zero if anything would break
 production.
 
-## 5. Build and run
+## 6. Build and run
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
+
+This also starts `awaken-cloudflared`, which connects out to Cloudflare on its own — nothing else
+to start or reload. In **Zero Trust → Networks → Tunnels**, `awaken` should show **Healthy**
+within a few seconds.
 
 First run: migrate and seed, using the `awaken-tools` service (the only one with
 devDependencies and the repo source — `awaken-app`'s own image is a stripped standalone build).
@@ -118,16 +144,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production run --rm aw
 Re-run whenever a release adds a file in `drizzle/` — **before** restarting the app on that
 release, and check last night's backup succeeded first (docs/BACKUPS.md).
 
-### Caddy
-
-Add `ops/Caddyfile.awaken`'s block to your existing shared Caddyfile (or `import` it as a separate
-file), then reload Caddy:
-
-```bash
-docker exec <your-caddy-container-name> caddy reload --config /etc/caddy/Caddyfile
-```
-
-## 6. Verify the deployment
+## 7. Verify the deployment
 
 1. `https://getawaken.com.ng/api/health` → `{"status":"ok"}` (503 means the database is
    unreachable).
@@ -142,10 +159,10 @@ docker exec <your-caddy-container-name> caddy reload --config /etc/caddy/Caddyfi
 
 - **Rate limiting** (sign-up 5/hour, sign-in 10/min, password-reset 3/5 min, …) is keyed by client
   IP and stored in Postgres (`rate_limit` table) so every instance shares the counters. The IP
-  comes from `AUTH_IP_HEADER` (default `x-forwarded-for`) — `ops/Caddyfile.awaken` explicitly
-  replaces that header rather than trusting whatever a client sent, so it can't be spoofed by
-  connecting straight to the app (it isn't reachable except through Caddy anyway, since it's only
-  `expose`d, not `ports`-published).
+  comes from `AUTH_IP_HEADER` (`.env.production.example` sets it to `cf-connecting-ip`) — this is
+  trustworthy only because the app is unreachable any other way: `awaken-app` is `expose`d, not
+  `ports`-published, so every request genuinely passed through Cloudflare's edge, which sets that
+  header itself from the real connection (a client can't fake it from outside).
 - **Search & sharing:** canonical URLs, `sitemap.xml`, `robots.txt` and share-card links are
   built from `BETTER_AUTH_URL`; if the domain ever changes, update it and redeploy.
 - **Sign-up consent:** sign-up requires an age range and Terms acceptance, stored on the user row

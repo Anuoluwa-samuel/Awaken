@@ -12,18 +12,17 @@ Items marked **Phase 11** must be resolved before a public deployment.
 
 ## Deployment (resolved in Phase 11, needs your accounts)
 
-Production is prepared for **self-hosted Docker + Caddy + Resend** on your own VM — see
-[DEPLOYMENT.md](DEPLOYMENT.md). What remains is on your side: the VM, verifying a sending domain,
-and entering the secrets. Specifically:
+Production is prepared for **self-hosted Docker + Cloudflare Tunnel + Resend**, on the same Oracle
+Cloud VM as Playbot and yito-shot-it — see [DEPLOYMENT.md](DEPLOYMENT.md). What remains is on your
+side: creating the tunnel, verifying a sending domain, and entering the secrets. Specifically:
 
 - **Email** is sent through Resend when `RESEND_API_KEY` + `EMAIL_FROM` are set. Without them
   (e.g. no sending domain yet), production runs with verification off and the password-reset page
   says resets aren't available; it refuses to start if verification is required.
-- **Rate limiting** keys on `AUTH_IP_HEADER` (default `x-forwarded-for`), which only resists
-  spoofing if the reverse proxy in front of the app explicitly overwrites it rather than appending
-  (`ops/Caddyfile.awaken` does this) and the app isn't directly reachable another way (it isn't —
-  see `docker-compose.prod.yml`'s `expose`, not `ports`). With no proxy doing this, all clients
-  would share one bucket.
+- **Rate limiting** keys on `AUTH_IP_HEADER` (`.env.production.example` sets it to
+  `cf-connecting-ip`), which only resists spoofing because the app isn't reachable any other way —
+  see `docker-compose.prod.yml`'s `expose`, not `ports`, on `awaken-app`. A different setup without
+  Cloudflare Tunnel in front would need a different trusted header, set deliberately.
 - **Backups rely on the VM:** there's no provider-managed point-in-time restore for a self-hosted
   Postgres container, so [BACKUPS.md](BACKUPS.md)'s nightly encrypted dump is the only net.
 - **Not done here:** the actual VM provisioning, custom-domain DNS, and an uptime monitor on
