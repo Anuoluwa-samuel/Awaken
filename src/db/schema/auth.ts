@@ -14,6 +14,8 @@ export const user = pgTable("user", {
   termsVersion: text("terms_version"),
   // Set only by `pnpm admin:grant`. "admin" opens /admin; never settable from a request.
   role: text("role", { enum: ["player", "admin"] }).notNull().default("player"),
+  // Better Auth's two-factor plugin. Never settable from request input (it flips this itself).
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -55,6 +57,23 @@ export const account = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("account_user_idx").on(t.userId)],
+);
+
+/** Better Auth's two-factor plugin (TOTP). One row per player who has 2FA on. */
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").notNull().default(true),
+    failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factor_user_idx").on(t.userId), index("two_factor_secret_idx").on(t.secret)],
 );
 
 export const verification = pgTable(

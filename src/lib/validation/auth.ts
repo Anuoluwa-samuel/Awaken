@@ -28,6 +28,24 @@ export const registerSchema = z
       ctx.addIssue({ code: "custom", path: [path], message: consent.message });
     }
   });
+/** Same age/Terms questions as sign-up, for a Google account that skipped them (see /consent). */
+export const consentSchema = z
+  .object({
+    ageAnswer: z.enum(AGE_ANSWERS, { message: "Choose your age range" }),
+    guardianConsent: z.boolean(),
+    acceptTerms: z.boolean(),
+  })
+  .superRefine((v, ctx) => {
+    const consent = checkSignUpConsent(v);
+    if (!consent.ok) {
+      const path = {
+        AGE_REQUIREMENT_NOT_MET: "ageAnswer",
+        GUARDIAN_CONSENT_REQUIRED: "guardianConsent",
+        TERMS_NOT_ACCEPTED: "acceptTerms",
+      }[consent.code];
+      ctx.addIssue({ code: "custom", path: [path], message: consent.message });
+    }
+  });
 export const forgotSchema = z.object({ email });
 export const resetSchema = z
   .object({ password, confirm: z.string() })

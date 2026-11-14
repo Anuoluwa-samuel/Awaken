@@ -1,9 +1,12 @@
+import { eq, and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { DeleteAccount } from "@/components/player/delete-account";
 import { PushToggle, SoundToggle } from "@/components/player/game-feedback-settings";
 import { SettingsForm } from "@/components/player/settings-form";
+import { TwoFactorSettings } from "@/components/player/two-factor-settings";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { db } from "@/db";
+import { account } from "@/db/schema";
 import { env } from "@/lib/env";
 import { getPlayerContext } from "@/server/player-context";
 import { getQuotaUsage } from "@/server/services/limits";
@@ -12,7 +15,10 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const { profile, user } = await getPlayerContext();
-  const usage = await getQuotaUsage(db, user.id);
+  const [usage, credential] = await Promise.all([
+    getQuotaUsage(db, user.id),
+    db.query.account.findFirst({ where: and(eq(account.userId, user.id), eq(account.providerId, "credential")) }),
+  ]);
   return (
     <div className="grid max-w-2xl gap-6">
       <Panel>
@@ -44,6 +50,15 @@ export default async function SettingsPage() {
           <dt className="text-ink-faint">Email</dt>
           <dd>{user.email}</dd>
         </dl>
+      </Panel>
+      <Panel>
+        <PanelHeader eyebrow="Security" title="Two-factor authentication" />
+        <div className="p-5 sm:p-6">
+          <TwoFactorSettings
+            initiallyEnabled={(user as { twoFactorEnabled?: boolean }).twoFactorEnabled ?? false}
+            hasPassword={!!credential}
+          />
+        </div>
       </Panel>
       <Panel>
         <PanelHeader eyebrow="Fair use" title="Today's usage" />

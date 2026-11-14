@@ -226,6 +226,30 @@ nothing; GitHub Actions's free tier easily covers an hourly + a daily ping.
 Cloud's Always Free tier doesn't bill unless you explicitly upgrade past it (check **Billing →
 Cost Analysis** periodically anyway), and Resend's plan limits.
 
+## Two-factor authentication and Google sign-in
+
+**Two-factor authentication (TOTP)** needs no setup — it's always on, and each player turns it on
+for themselves from Settings (an authenticator app like Google Authenticator, Authy or 1Password).
+
+**"Continue with Google"** needs a Google Cloud project, since it's missing from `.env.production`
+until you add it — the button itself only appears once both keys are set:
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → project picker → **New
+   project** (e.g. `AWAKEN`).
+2. **APIs & Services → OAuth consent screen**: User type **External**; app name `AWAKEN`;
+   support email: yours. **Audience → Publish app** so anyone can sign in, not only test users.
+3. **Credentials → Create credentials → OAuth client ID**:
+   - Application type **Web application**
+   - Authorised JavaScript origins: `https://getawaken.com.ng`
+   - Authorised redirect URIs: `https://getawaken.com.ng/api/auth/callback/google`
+4. Copy the **Client ID** and **Client secret**, and put them straight into `.env.production` as
+   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` — never into chat with an assistant.
+5. Rebuild and restart: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d`.
+
+A Google account created this way skips the age/Terms question the email form asks at sign-up; the
+player is sent to `/consent` to answer it once, right after their first sign-in, before anything
+else in the app (`requireUser()`, `src/lib/auth/session.ts`).
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, typecheck, unit +

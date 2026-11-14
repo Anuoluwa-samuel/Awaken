@@ -12,11 +12,13 @@ import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { LockoutCountdown } from "./lockout-countdown";
+import { TwoFactorChallenge } from "./two-factor-challenge";
 import { loginSchema } from "@/lib/validation/auth";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
   // Seconds left on an account lockout (null = not locked); `lockKey` restarts the countdown.
   const [lockedFor, setLockedFor] = useState<number | null>(null);
   const [lockKey, setLockKey] = useState(0);
@@ -32,7 +34,11 @@ export function LoginForm({ next }: { next: string }) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
-    const { error } = await authClient.signIn.email({ ...values, ...captchaFetchOptions(captchaToken) });
+    const { data, error } = await authClient.signIn.email({ ...values, ...captchaFetchOptions(captchaToken) });
+    if (!error && (data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      setNeedsTwoFactor(true);
+      return;
+    }
     if (error?.code === "CAPTCHA_REQUIRED") {
       // Only appears after repeated wrong passwords. Ask, then let them submit again.
       setShowCaptcha(true);
@@ -61,6 +67,8 @@ export function LoginForm({ next }: { next: string }) {
     router.replace(next);
     router.refresh();
   });
+
+  if (needsTwoFactor) return <TwoFactorChallenge next={next} />;
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-4">

@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
+import { twoFactor } from "better-auth/plugins";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { emailTransportAvailable, sendBudgetedEmail } from "@/lib/email";
@@ -54,8 +55,14 @@ export const auth = betterAuth({
       account: schema.account,
       verification: schema.verification,
       rateLimit: schema.rateLimit,
+      twoFactor: schema.twoFactor,
     },
   }),
+  // Set only when both keys exist (src/lib/env.ts). Absent otherwise, so the button never
+  // appears for a half-configured install.
+  socialProviders: env.GOOGLE_CLIENT_ID
+    ? { google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET! } }
+    : undefined,
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
@@ -107,8 +114,12 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Stamp the consent the before-hook already validated onto the new user row.
+        // Stamp the consent the before-hook already validated onto the new user row. Only the
+        // email/password form carries ageAnswer/acceptTerms — a Google sign-up creates the user
+        // with no consent recorded, and requireUser() (src/lib/auth/session.ts) sends them to
+        // /consent to finish it before they reach anything else.
         before: async (user, ctx) => {
+          if (ctx?.path !== SIGN_UP) return;
           const consent = checkSignUpConsent(ctx?.body as ConsentBody | undefined);
           if (!consent.ok) throw new APIError("BAD_REQUEST", { code: consent.code, message: consent.message });
           return {
@@ -205,6 +216,10 @@ export const auth = betterAuth({
       await clearLockout(db, email);
     }),
   },
-  // Must be last: lets server actions set auth cookies.
-  plugins: [nextCookies()],
+  plugins: [
+    // allowPasswordless: a Google-only account has no password to confirm with.
+    twoFactor({ issuer: "AWAKEN", allowPasswordless: true }),
+    // Must be last: lets server actions set auth cookies.
+    nextCookies(),
+  ],
 });

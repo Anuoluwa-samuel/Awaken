@@ -3,6 +3,7 @@ import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
 import { RegisterForm } from "@/components/auth/register-form";
 import { getSession } from "@/lib/auth/session";
 import { issueFormToken } from "@/lib/auth/spam-rules";
@@ -34,6 +35,12 @@ export default async function RegisterPage() {
         requireVerification={env.REQUIRE_EMAIL_VERIFICATION}
         formToken={issueFormToken(env.BETTER_AUTH_SECRET)}
       />
+      {env.GOOGLE_CLIENT_ID ? (
+        <>
+          <OrDivider />
+          <GoogleButton next="/onboarding" />
+        </>
+      ) : null}
     </AuthCard>
   );
 }
