@@ -10,7 +10,13 @@
 # `pnpm dev`).
 services:
   awaken-app:
-    build: .
+    build:
+      context: .
+      # The app's own static pages and sitemap/robots/manifest are baked at build time with
+      # whatever BETTER_AUTH_URL is set here — it must be the real public origin, not the
+      # Dockerfile's localhost placeholder. Sourced from this file's own --env-file (.env.production).
+      args:
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     container_name: awaken-app
     restart: unless-stopped
     env_file: .env.production
@@ -44,6 +50,8 @@ services:
     build:
       context: .
       target: builder
+      args:
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     profiles: ["tools"]
     env_file: .env.production
     networks:
