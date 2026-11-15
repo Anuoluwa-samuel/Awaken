@@ -10,6 +10,7 @@ import { Captcha, captchaFetchOptions } from "@/components/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { LockoutCountdown } from "./lockout-countdown";
 import { TwoFactorChallenge } from "./two-factor-challenge";
@@ -78,9 +79,8 @@ export function LoginForm({ next }: { next: string }) {
         <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register("email")} />
       </Field>
       <Field id="password" label="Password" error={errors.password?.message}>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="current-password"
           aria-invalid={!!errors.password}
           {...form.register("password")}

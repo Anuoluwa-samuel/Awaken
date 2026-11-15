@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 
 type Step = "off" | "password" | "confirm" | "on" | "disable";
@@ -106,7 +107,7 @@ export function TwoFactorSettings({ initiallyEnabled, hasPassword }: { initially
         {error ? <FormMessage tone="error">{error}</FormMessage> : null}
         {hasPassword ? (
           <Field id="2fa-disable-password" label="Confirm your password">
-            <Input id="2fa-disable-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput id="2fa-disable-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
         ) : null}
         <div className="flex gap-2">
@@ -178,7 +179,7 @@ export function TwoFactorSettings({ initiallyEnabled, hasPassword }: { initially
       <div className="grid gap-3">
         {error ? <FormMessage tone="error">{error}</FormMessage> : null}
         <Field id="2fa-password" label="Confirm your password">
-          <Input id="2fa-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput id="2fa-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <div className="flex gap-2">
           <Button type="button" size="sm" disabled={busy || password.length === 0} onClick={startEnable}>

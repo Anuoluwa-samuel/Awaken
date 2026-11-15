@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 
 const CONFIRM_WORD = "DELETE";
@@ -71,9 +72,8 @@ export function DeleteAccount() {
       </FormMessage>
       {error ? <FormMessage tone="error">{error}</FormMessage> : null}
       <Field id="delete-password" label="Password" error={fieldErrors.password}>
-        <Input
+        <PasswordInput
           id="delete-password"
-          type="password"
           autoComplete="current-password"
           aria-invalid={!!fieldErrors.password}
           value={password}

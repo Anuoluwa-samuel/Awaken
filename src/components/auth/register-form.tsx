@@ -11,6 +11,7 @@ import { Captcha, captchaFetchOptions } from "@/components/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { LEGAL } from "@/lib/legal";
 import { registerSchema } from "@/lib/validation/auth";
@@ -116,18 +117,16 @@ export function RegisterForm({ requireVerification, formToken }: { requireVerifi
         <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register("email")} />
       </Field>
       <Field id="password" label="Password" hint="At least 10 characters." error={errors.password?.message}>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           aria-invalid={!!errors.password}
           {...form.register("password")}
         />
       </Field>
       <Field id="confirm" label="Confirm password" error={errors.confirm?.message}>
-        <Input
+        <PasswordInput
           id="confirm"
-          type="password"
           autoComplete="new-password"
           aria-invalid={!!errors.confirm}
           {...form.register("confirm")}
