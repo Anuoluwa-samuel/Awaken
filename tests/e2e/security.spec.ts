@@ -13,7 +13,7 @@ test("an open ?next redirect can't send players off-site", async ({ page, browse
   const fresh = await ctx.newPage();
   await visit(fresh, "/login?next=//evil.example/steal");
   await fresh.getByLabel("Email").fill(email);
-  await fresh.getByLabel("Password").fill(PASSWORD);
+  await fresh.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await fresh.getByRole("button", { name: /enter the system/i }).click();
   await fresh.waitForURL("**/system");
   expect(new URL(fresh.url()).host).toBe("localhost:3200");
