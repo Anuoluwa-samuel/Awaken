@@ -480,6 +480,16 @@ export default function GuidePage() {
                 your password or after several wrong passwords.
               </li>
               <li>
+                <strong>Two-factor authentication:</strong> turn it on in <strong>Settings</strong> for an extra code
+                from an authenticator app at sign-in. Save the backup codes it shows you — each works once if you lose
+                access to the app.
+              </li>
+              <li>
+                <strong>Signing in with Google:</strong> where it&apos;s offered, &ldquo;Continue with Google&rdquo; skips
+                passwords entirely. The same age and Terms questions apply, just asked right after your first sign-in
+                instead of on the form.
+              </li>
+              <li>
                 <strong>Deleting your account:</strong> go to <strong>Settings → Delete account</strong>. It permanently
                 removes your account and all your data straight away, and it can&apos;t be undone.
               </li>

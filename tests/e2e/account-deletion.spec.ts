@@ -24,14 +24,14 @@ test("a player can delete their account from Settings", async ({ page }) => {
   await expect(page.getByText("Type DELETE to confirm.")).toBeVisible();
 
   // Wrong password: refused, nothing deleted. Capitals and stray spaces don't matter.
-  await page.getByLabel("Password").fill("not-my-password");
+  await page.getByLabel("Password", { exact: true }).fill("not-my-password");
   await page.getByLabel("Type DELETE to confirm").fill("delete ");
   await submit.click();
   await expect(page.getByText("That password isn't right.")).toBeVisible();
   expect(await sql`select 1 from "user" where id = ${userId}`).toHaveLength(1);
 
   // Right password: deleted, signed out, told so.
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await submit.click();
   await page.waitForURL((url) => url.pathname === "/");
   await expect(page.getByText("Your account and all its data have been deleted.")).toBeVisible();
@@ -42,7 +42,7 @@ test("a player can delete their account from Settings", async ({ page }) => {
   await visit(page, "/system");
   await expect(page).toHaveURL(/\/login/);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: /enter the system/i }).click();
   await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });

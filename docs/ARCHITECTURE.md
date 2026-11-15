@@ -498,7 +498,27 @@ cases (`AGE_REQUIREMENT_NOT_MET`, `GUARDIAN_CONSENT_REQUIRED`, `TERMS_NOT_ACCEPT
 `databaseHooks.user.create.before` hook stamps `user.age_group` (`adult`/`teen`),
 `terms_accepted_at` and `terms_version` (= `LEGAL.updated`). Those columns are `input: false`, so a
 request can't set them; the form sends its answers as `ageAnswer`/`guardianConsent`/`acceptTerms`.
-Only an age range is stored, never a date of birth.
+Only an age range is stored, never a date of birth. The hook only enforces this on `ctx.path ===
+"/sign-up/email"` — a Google sign-up has no such body to check, so it creates the user with these
+columns null and `requireUser()` (`src/lib/auth/session.ts`) sends them to `/consent` to answer
+the same questions once, before anything else in the app.
+
+## 6i. Two-factor authentication and Google sign-in
+
+**2FA** is Better Auth's `twoFactor` plugin (`src/lib/auth/server.ts`), TOTP only,
+`allowPasswordless: true` (a Google-only account has no password to confirm setup or disabling
+with). A player turns it on from Settings (`src/components/player/two-factor-settings.tsx`):
+`enable({method: "totp"})` returns a `totpURI` + one-time backup codes and writes an unverified
+`two_factor` row; the same `verifyTotp` call both confirms setup (flips `user.two_factor_enabled`)
+and, reused at sign-in, answers the challenge. `signIn.email` returns `{twoFactorRedirect: true}`
+instead of a session when the account has 2FA on; `LoginForm` swaps in `TwoFactorChallenge`
+(code, or a backup code, plus "trust this device for 30 days") instead of navigating away.
+
+**Google sign-in** is a core Better Auth social provider (`socialProviders.google`), present only
+when both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set (src/lib/env.ts) — the
+button (`src/components/auth/google-button.tsx`) is a server-rendered conditional, never a
+runtime check. Reuses the existing `account` table (one row per linked provider); no schema
+changes beyond 2FA's.
 
 **Analytics:** none wired in. Vercel Web Analytics and Speed Insights were Vercel-only and were
 removed with the move off Vercel (self-hosted; see docs/DEPLOYMENT.md). The admin dashboard's
@@ -653,3 +673,4 @@ creates and drops a throwaway database and skips if no server is reachable.
 - [x] Phase 10 — Playwright E2E (journey, security, isolation, rate limits), axe accessibility on all pages, mobile overflow checks, fixes, docs/LIMITATIONS.md
 - [x] Phase 11 — Vercel + Neon + Resend: Resend email, DB-backed rate limits keyed on x-vercel-forwarded-for, pooled/direct Neon URLs, security headers + CSP, /api/health, global error page, deploy:check, CI workflow, docs/DEPLOYMENT.md
 - [x] Phase 12 — Moved off Vercel (cost): self-hosted Docker on the same Oracle Cloud VM as Playbot/yito-shot-it, own Postgres container, Cloudflare Tunnel (matching the other two projects — no open ports, no shared reverse proxy), `output: "standalone"`, GitHub Actions cron (maintenance + reminders) replacing Vercel Cron, dropped Vercel Analytics/Speed Insights/BotID, docs/DEPLOYMENT.md and docs/BACKUPS.md rewritten
+- [x] Phase 13 — TOTP two-factor authentication (enable/disable/backup codes in Settings, sign-in challenge) and "Continue with Google" (new `/consent` step for the age/Terms questions a social sign-up skips), both verified live with a real authenticator code against a temp database

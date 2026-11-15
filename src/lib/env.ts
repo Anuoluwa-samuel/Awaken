@@ -33,10 +33,17 @@ const schema = z
     /** Web push for the evening reminder (`pnpm push:keys` makes a pair). Both keys on, or both off. */
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    /** "Continue with Google" (docs/DEPLOYMENT.md). Both keys on, or both off. */
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   })
   .refine((e) => !e.NEXT_PUBLIC_TURNSTILE_SITE_KEY === !e.TURNSTILE_SECRET_KEY, {
     path: ["TURNSTILE_SECRET_KEY"],
     message: "Set both Turnstile keys or neither",
+  })
+  .refine((e) => !e.GOOGLE_CLIENT_ID === !e.GOOGLE_CLIENT_SECRET, {
+    path: ["GOOGLE_CLIENT_SECRET"],
+    message: "Set both Google OAuth keys or neither",
   })
   .refine((e) => !e.NEXT_PUBLIC_VAPID_PUBLIC_KEY === !e.VAPID_PRIVATE_KEY, {
     path: ["VAPID_PRIVATE_KEY"],

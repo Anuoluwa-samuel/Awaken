@@ -3,9 +3,11 @@ import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { FormMessage } from "@/components/ui/field";
 import { getSession } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 import { safeNextPath } from "@/lib/validation/auth";
 
 export const metadata: Metadata = pageMetadata({
@@ -40,6 +42,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </div>
       ) : null}
       <LoginForm next={next} />
+      {env.GOOGLE_CLIENT_ID ? (
+        <>
+          <OrDivider />
+          <GoogleButton next={next} />
+        </>
+      ) : null}
     </AuthCard>
   );
 }

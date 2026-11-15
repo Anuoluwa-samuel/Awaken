@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { resetSchema } from "@/lib/validation/auth";
 
@@ -34,10 +34,10 @@ export function ResetForm({ token }: { token: string }) {
     <form onSubmit={onSubmit} noValidate className="grid gap-4">
       {error ? <FormMessage tone="error">{error}</FormMessage> : null}
       <Field id="password" label="New password" hint="At least 10 characters." error={errors.password?.message}>
-        <Input id="password" type="password" autoComplete="new-password" aria-invalid={!!errors.password} {...form.register("password")} />
+        <PasswordInput id="password" autoComplete="new-password" aria-invalid={!!errors.password} {...form.register("password")} />
       </Field>
       <Field id="confirm" label="Confirm password" error={errors.confirm?.message}>
-        <Input id="confirm" type="password" autoComplete="new-password" aria-invalid={!!errors.confirm} {...form.register("confirm")} />
+        <PasswordInput id="confirm" autoComplete="new-password" aria-invalid={!!errors.confirm} {...form.register("confirm")} />
       </Field>
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? "Updating…" : "Set new password"}

@@ -12,10 +12,13 @@ export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() });
 });
 
-/** The signed-in user. Redirects to /login otherwise. */
+/** The signed-in user. Redirects to /login otherwise, or to /consent if they signed up through
+ * Google and haven't yet given the age/Terms consent the email form collects at sign-up. */
 export async function requireUser() {
   const session = await getSession();
   if (!session) redirect("/login");
+  const user = session.user as typeof session.user & { termsAcceptedAt?: Date | string | null };
+  if (!user.termsAcceptedAt) redirect("/consent");
   return session.user;
 }
 

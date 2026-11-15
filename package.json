@@ -22,6 +22,7 @@
     "deploy:check": "tsx scripts/deploy-check.mts",
     "guide:pdf": "tsx scripts/guide-pdf.mts",
     "admin:grant": "tsx src/db/grant-admin.ts",
+    "admin:delete-account": "tsx src/db/delete-account.ts",
     "push:keys": "web-push generate-vapid-keys"
   },
   "dependencies": {
