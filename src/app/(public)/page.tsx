@@ -5,11 +5,13 @@ import { Suspense } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { LegalFooter } from "@/components/legal/legal-page";
 import { AccountDeletedNotice } from "@/components/player/account-deleted-notice";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { ProgressBar } from "@/components/ui/progress";
 import { RANKS } from "@/lib/progression/config";
 import { pageMetadata, SITE } from "@/lib/site";
+import { softwareApplicationSchema } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({ description: SITE.description, path: "/" });
 
@@ -31,6 +33,7 @@ const FEATURES = [
 export default function LandingPage() {
   return (
     <div className="system-grid min-h-dvh">
+      <JsonLd data={softwareApplicationSchema()} />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Wordmark />
         <nav className="flex items-center gap-2">

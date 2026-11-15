@@ -27,6 +27,23 @@ test("public pages have a title, description, canonical URL and share image", as
   expect(image.headers()["content-type"]).toBe("image/png");
 });
 
+test("structured data is present and matches the visible content", async ({ page }) => {
+  const jsonLd = async () =>
+    (await page.locator('script[type="application/ld+json"]').allTextContents()).map((t) => JSON.parse(t));
+
+  await visit(page, "/");
+  let types = (await jsonLd()).map((d) => d["@type"]);
+  expect(types).toEqual(["Organization", "WebSite", "SoftwareApplication"]);
+
+  await visit(page, "/guide");
+  const blocks = await jsonLd();
+  types = blocks.map((d) => d["@type"]);
+  expect(types).toEqual(["Organization", "WebSite", "FAQPage"]);
+  const faq = blocks.find((d) => d["@type"] === "FAQPage");
+  const visibleQuestions = await page.locator('section[aria-labelledby="faq"] h3').allTextContents();
+  expect(faq.mainEntity.map((q: { name: string }) => q.name)).toEqual(visibleQuestions);
+});
+
 test("private pages are kept out of search results", async ({ page }) => {
   for (const path of PUBLIC_PAGES.filter((p) => !INDEXED.includes(p))) {
     await visit(page, path);

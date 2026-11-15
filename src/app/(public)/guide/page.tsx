@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { LegalFooter } from "@/components/legal/legal-page";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { ACHIEVEMENTS, SKILLS } from "@/db/seed-data";
 import { LOCKOUT } from "@/lib/auth/lockout-rules";
@@ -31,6 +32,7 @@ import { DEFAULT_DAILY_QUESTS } from "@/lib/progression/daily-rotation";
 import { focusXp } from "@/lib/progression/focus";
 import { xpToReach } from "@/lib/progression/levels";
 import { pageMetadata } from "@/lib/site";
+import { faqPageSchema } from "@/lib/structured-data";
 import { LEADERBOARD_SIZE } from "@/server/services/leaderboard";
 import { FRIEND_RULES } from "@/server/services/friends";
 import { BONUS_RULES } from "@/lib/progression/bonuses";
@@ -62,6 +64,45 @@ const SECTIONS = [
   ["account", "Your account"],
   ["faq", "Common questions"],
 ] as const;
+
+// Built from the game's own config, like the rest of this page — and feeds the FAQPage
+// structured data below, so the visible text and the schema can never say different things.
+function faqItems() {
+  return [
+    {
+      question: "Why did I get less XP than the quest said, or none?",
+      answer: `You've probably completed more than ${LIMITS.customCompletionsPerCategoryPerDay} custom quests in one category today, or finished more than ${GOAL_RULES.maxRewardedPerDay} goals. The System tells you when this happens, and the count resets when your new day starts. Check-ins on rest days and focus sessions ended early also earn no XP.`,
+    },
+    {
+      question: "It says I'm going too fast, or that I've reached a limit. What should I do?",
+      answer:
+        "“Too fast” clears within a minute, so wait a moment and try again. A daily limit on creating things resets at midnight UTC, and you can see your usage in Settings. Neither affects your progress.",
+    },
+    {
+      question: "I pressed Complete by mistake. Can I undo it?",
+      answer: "Not at the moment. Completions are final, so check before you press.",
+    },
+    {
+      question: "I missed a few days. Have I lost progress?",
+      answer:
+        "No. Your XP, level and rank stay exactly where they were. A habit streak may restart, but your best streak stays on record. Just pick up with today's quests.",
+    },
+    {
+      question: "Does AWAKEN check that I really did the task?",
+      answer: "No. Everything is self-reported, and the game only means something if you're honest with yourself.",
+    },
+    {
+      question: "I changed my focus areas. Why are today's quests the same?",
+      answer:
+        "Each day's quests are set when the day starts, so changes to your focus areas or daily target apply from tomorrow.",
+    },
+    {
+      question: "Is AWAKEN medical or fitness advice?",
+      answer:
+        "No. Attributes are game mechanics, not measurements of your ability or health. Check with a professional before starting a new exercise routine, and rest when you need to.",
+    },
+  ];
+}
 
 function Section({ id, children }: { id: (typeof SECTIONS)[number][0]; children: ReactNode }) {
   const title = SECTIONS.find(([key]) => key === id)![1];
@@ -106,6 +147,7 @@ const capitalise = (word: string) => word[0]!.toUpperCase() + word.slice(1);
 export default function GuidePage() {
   return (
     <div className="system-grid min-h-dvh">
+      <JsonLd data={faqPageSchema(faqItems())} />
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href="/" className="rounded-md" aria-label="AWAKEN home">
           <Wordmark />
@@ -501,39 +543,12 @@ export default function GuidePage() {
           </Section>
 
           <Section id="faq">
-            <h3>Why did I get less XP than the quest said, or none?</h3>
-            <p>
-              You&apos;ve probably completed more than {LIMITS.customCompletionsPerCategoryPerDay} custom quests in one
-              category today, or finished more than {GOAL_RULES.maxRewardedPerDay} goals. The System tells you when this
-              happens, and the count resets when your new day starts. Check-ins on rest days and focus sessions ended
-              early also earn no XP.
-            </p>
-            <h3>It says I&apos;m going too fast, or that I&apos;ve reached a limit. What should I do?</h3>
-            <p>
-              &ldquo;Too fast&rdquo; clears within a minute, so wait a moment and try again. A daily limit on creating
-              things resets at midnight UTC, and you can see your usage in Settings. Neither affects your progress.
-            </p>
-            <h3>I pressed Complete by mistake. Can I undo it?</h3>
-            <p>Not at the moment. Completions are final, so check before you press.</p>
-            <h3>I missed a few days. Have I lost progress?</h3>
-            <p>
-              No. Your XP, level and rank stay exactly where they were. A habit streak may restart, but your best streak
-              stays on record. Just pick up with today&apos;s quests.
-            </p>
-            <h3>Does AWAKEN check that I really did the task?</h3>
-            <p>
-              No. Everything is self-reported, and the game only means something if you&apos;re honest with yourself.
-            </p>
-            <h3>I changed my focus areas. Why are today&apos;s quests the same?</h3>
-            <p>
-              Each day&apos;s quests are set when the day starts, so changes to your focus areas or daily target apply
-              from tomorrow.
-            </p>
-            <h3>Is AWAKEN medical or fitness advice?</h3>
-            <p>
-              No. Attributes are game mechanics, not measurements of your ability or health. Check with a professional
-              before starting a new exercise routine, and rest when you need to.
-            </p>
+            {faqItems().map(({ question, answer }) => (
+              <div key={question}>
+                <h3>{question}</h3>
+                <p>{answer}</p>
+              </div>
+            ))}
           </Section>
         </div>
 

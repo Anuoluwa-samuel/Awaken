@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, Geist, Geist_Mono, Montserrat } from "next/font/google";
 import { IntroSplash } from "@/components/brand/intro-splash";
 import { LogoDefs } from "@/components/brand/logo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { pageMetadata, SITE, siteUrl } from "@/lib/site";
+import { organizationSchema, webSiteSchema } from "@/lib/structured-data";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -35,6 +37,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${chakra.variable} ${montserrat.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <JsonLd data={organizationSchema()} />
+        <JsonLd data={webSiteSchema()} />
         <LogoDefs />
         <IntroSplash />
         {children}
